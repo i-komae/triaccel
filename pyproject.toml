@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "pybind11>=2.11", "numpy>=2.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "triaccel"
+version = "0.4.0"
+description = "Triplet-count simulation core + plotting utilities"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.0",
+    "matplotlib>=3.7",
+]

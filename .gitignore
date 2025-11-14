@@ -1,0 +1,8 @@
+venv
+*egg-info
+__pycache__
+build
+tutorial/figs*
+tutorial/log*
+tutorial/result*
+*.DS_Store
