@@ -32,21 +32,15 @@ namespace py = pybind11;
 
 
 // 事前計算済みの RA/Dec 配列を使ってイベント・ヒストグラムを更新（再計算を回避）
-static void update_event_histograms_if_needed(
+static void update_event_histograms(
     int N,
     const std::vector<double> &ra_deg_arr,
     const std::vector<double> &dec_deg_arr,
     int tid,
-    bool return_histograms,
     int bins_ra,
     const std::function<void(double, double, int &, int &)> &bin2d,
     std::vector<std::vector<long long>> &Evt2d_loc)
 {
-    if (!return_histograms)
-    {
-        return;
-    }
-
     for (int i = 0; i < N; ++i)
     {
         int ir, id;
@@ -162,7 +156,6 @@ struct ThreadBuf
     ThreadBuf(int N)
         : x(N), y(N), z(N), m0(N), m1(N), site_id(N, 0), in_cluster(N, 0),
           ra_deg_arr(N), dec_deg_arr(N) {}
-    void clear_cluster() { std::fill(in_cluster.begin(), in_cluster.end(), 0); }
 };
 
 // 乱数生成によりイベント方向（ECI）を生成し、RA/Dec を配列にキャッシュする
@@ -320,44 +313,51 @@ static void process_smallN_trial(
 
     if (cluster_size == 3)
     {
-        long long tri_cnt = count_triangles_u128(B.m0, B.m1);
-        counts_vec[t] = (int32_t)tri_cnt;
-
+        long long tri_cnt;
         if (return_histograms)
         {
-            enumerate_triangles_hist_from_masks_u128(
+            tri_cnt = enumerate_triangles_hist_from_masks_u128(
                 N, tid,
                 B.x, B.y, B.z,
                 B.m0, B.m1,
                 /*mark_members=*/debug,
                 B.in_cluster,
-                /*return_hist2d=*/return_histograms,
                 bins_ra,
                 bin2d,
-                Tri2d_loc,
-                /*tri2d_push_centroid=*/true);
+                Tri2d_loc);
         }
+        else
+        {
+            tri_cnt = count_triangles_u128(B.m0, B.m1);
+        }
+        counts_vec[t] = (int32_t)tri_cnt;
     }
     else if (cluster_size == 2)
     {
-        long long pair_cnt = count_pairs_u128(B.m0, B.m1, N, &B.in_cluster, debug);
-        counts_vec[t] = (int32_t)pair_cnt;
+        long long pair_cnt;
         if (return_histograms)
         {
-            enumerate_pairs_and_push_hist_u128(N, tid, B.m0, B.m1,
-                                               B.x, B.y, B.z,
-                                               /*return_hist2d=*/return_histograms,
-                                               bins_ra,
-                                               bin2d,
-                                               Tri2d_loc);
+            pair_cnt = enumerate_pairs_and_push_hist_u128(
+                N, tid, B.m0, B.m1,
+                B.x, B.y, B.z,
+                /*mark_members=*/debug,
+                B.in_cluster,
+                bins_ra,
+                bin2d,
+                Tri2d_loc);
         }
+        else
+        {
+            pair_cnt = count_pairs_u128(B.m0, B.m1, N, &B.in_cluster, debug);
+        }
+        counts_vec[t] = (int32_t)pair_cnt;
     }
     else
     {
         long long kcnt = count_k_cliques_u128(
             cluster_size, B.m0, B.m1, N, &B.in_cluster, debug,
             tid, &B.x, &B.y, &B.z,
-            /*return_hist2d=*/return_histograms,
+            return_histograms,
             bins_ra,
             &bin2d,
             &Tri2d_loc);
@@ -584,34 +584,38 @@ static void process_largeN_trial(
             return_histograms,
             bins_ra,
             bin2d,
-            Tri2d_loc,
-            /*tri2d_push_centroid=*/true);
+            Tri2d_loc);
         counts_vec[t] = (int32_t)tri_cnt_gen;
     }
     else if (cluster_size == 2)
     {
-        // We already computed the undirected edge count while building NB.
-        // Use it directly for k=2 to keep smallN/largeN paths consistent.
-        long long pair_cnt = edges_undirected;
-        if (debug)
+        long long pair_cnt;
+        if (return_histograms)
         {
-            long long check = count_pairs_bitadj(NB, N, W, &B.in_cluster, debug);
-            if (check != pair_cnt)
+            pair_cnt = enumerate_pairs_and_push_hist_bitadj(
+                NB, N, W, tid,
+                B.x, B.y, B.z,
+                /*mark_members=*/debug,
+                B.in_cluster,
+                bins_ra,
+                bin2d,
+                Tri2d_loc);
+        }
+        else
+        {
+            // We already computed the undirected edge count while building NB.
+            pair_cnt = edges_undirected;
+            if (debug)
             {
-                std::fprintf(stderr, "[warn] pair_cnt mismatch: edges_undirected=%lld, recount=%lld\n",
-                             pair_cnt, check);
+                long long check = count_pairs_bitadj(NB, N, W, &B.in_cluster, debug);
+                if (check != pair_cnt)
+                {
+                    std::fprintf(stderr, "[warn] pair_cnt mismatch: edges_undirected=%lld, recount=%lld\n",
+                                 pair_cnt, check);
+                }
             }
         }
         counts_vec[t] = (int32_t)pair_cnt;
-        if (return_histograms)
-        {
-            enumerate_pairs_and_push_hist_bitadj(NB, N, W, tid,
-                                                 B.x, B.y, B.z,
-                                                 /*return_hist2d=*/return_histograms,
-                                                 bins_ra,
-                                                 bin2d,
-                                                 Tri2d_loc);
-        }
     }
     else
     {
@@ -850,11 +854,13 @@ static void run_simulation_and_aggregate(
 
             generate_events_and_cache(S, rng, B);
 
-            update_event_histograms_if_needed(
-                N, B.ra_deg_arr, B.dec_deg_arr, tid,
-                return_histograms,
-                bins_ra,
-                bin2d, Evt2d_loc);
+            if (return_histograms)
+            {
+                update_event_histograms(
+                    N, B.ra_deg_arr, B.dec_deg_arr, tid,
+                    bins_ra,
+                    bin2d, Evt2d_loc);
+            }
 
             if (N <= 128)
             {
@@ -1026,9 +1032,9 @@ py::dict simulate(
         }
     }
 
-    // 共通エッジ（1D/2D で同じものを使う）
     if (return_histograms)
     {
+        // 共通エッジ（1D/2D で同じものを使う）
         py::array_t<double> ra_edges(bins_ra + 1), dec_edges(bins_dec + 1);
         for (int i = 0; i <= bins_ra; ++i)
             ra_edges.mutable_at(i) = ra_lo + wra * (double)i; // [-180, 180]（右端は境界）
@@ -1037,10 +1043,7 @@ py::dict simulate(
         out["ra_edges"] = ra_edges;
         out["dec_edges"] = dec_edges;
         out["ra_origin_deg"] = py::float_(ra_lo);
-    }
 
-    if (return_histograms)
-    {
         py::array_t<long long> E({bins_dec, bins_ra});
         py::array_t<long long> T({bins_dec, bins_ra});
         auto Ev = E.mutable_unchecked<2>(), Tv = T.mutable_unchecked<2>();

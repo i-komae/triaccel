@@ -81,7 +81,7 @@ inline long long count_pairs_u128(const std::vector<uint64_t> &m0,
     return deg_sum / 2;
 }
 
-inline void enumerate_triangles_hist_from_masks_u128(
+inline long long enumerate_triangles_hist_from_masks_u128(
     int N, int tid,
     const std::vector<double> &x,
     const std::vector<double> &y,
@@ -90,12 +90,11 @@ inline void enumerate_triangles_hist_from_masks_u128(
     const std::vector<uint64_t> &m1,
     bool mark_members,
     std::vector<char> &in_cluster,
-    bool return_hist2d,
     int bins_ra,
     const std::function<void(double, double, int &, int &)> &bin2d,
-    std::vector<std::vector<long long>> &Tri2d_loc,
-    bool tri2d_push_centroid)
+    std::vector<std::vector<long long>> &Tri2d_loc)
 {
+    long long tri_cnt = 0;
     for (int i = 0; i < N - 2; ++i)
     {
         for (int j = i + 1; j < N - 1; ++j)
@@ -119,11 +118,9 @@ inline void enumerate_triangles_hist_from_masks_u128(
                 double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0;
                 vx/=r; vy/=r; vz/=r;
                 double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-                if (return_hist2d && tri2d_push_centroid)
-                {
-                    int ir, id; bin2d(ra_deg, dec_deg, ir, id);
-                    Tri2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
-                }
+                tri_cnt += 1;
+                int ir, id; bin2d(ra_deg, dec_deg, ir, id);
+                Tri2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
             }
             const int base = 64;
             while (c1)
@@ -136,14 +133,13 @@ inline void enumerate_triangles_hist_from_masks_u128(
                 double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0;
                 vx/=r; vy/=r; vz/=r;
                 double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-                if (return_hist2d && tri2d_push_centroid)
-                {
-                    int ir, id; bin2d(ra_deg, dec_deg, ir, id);
-                    Tri2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
-                }
+                tri_cnt += 1;
+                int ir, id; bin2d(ra_deg, dec_deg, ir, id);
+                Tri2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
             }
         }
     }
+    return tri_cnt;
 }
 
 inline long long count_k_cliques_u128(
@@ -217,18 +213,20 @@ inline long long count_k_cliques_u128(
     return kcnt;
 }
 
-inline void enumerate_pairs_and_push_hist_u128(
+inline long long enumerate_pairs_and_push_hist_u128(
     int N, int tid,
     const std::vector<uint64_t> &m0,
     const std::vector<uint64_t> &m1,
     const std::vector<double> &x,
     const std::vector<double> &y,
     const std::vector<double> &z,
-    bool return_hist2d,
+    bool mark_members,
+    std::vector<char> &in_cluster,
     int bins_ra,
     const std::function<void(double, double, int &, int &)> &bin2d,
     std::vector<std::vector<long long>> &H_2d_loc)
 {
+    long long pair_cnt = 0;
     for (int i = 0; i < N - 1; ++i)
     {
         uint64_t a0 = (i < 63) ? (m0[i] & ~(((1ULL) << (i + 1)) - 1ULL)) : 0ULL;
@@ -239,8 +237,14 @@ inline void enumerate_pairs_and_push_hist_u128(
             double vx = x[i] + x[j]; double vy = y[i] + y[j]; double vz = z[i] + z[j];
             double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0; vx/=r; vy/=r; vz/=r;
             double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-            if (return_hist2d) { int ir, id; bin2d(ra_deg, dec_deg, ir, id);
-                H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1; }
+            if (mark_members)
+            {
+                in_cluster[i] = 1;
+                in_cluster[j] = 1;
+            }
+            pair_cnt += 1;
+            int ir, id; bin2d(ra_deg, dec_deg, ir, id);
+            H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
         }
         uint64_t a1 = m1[i]; if (i >= 64) { int ib = i - 64; if (ib < 63) a1 &= ~(((1ULL) << (ib + 1)) - 1ULL); else a1 = 0ULL; }
         const int base = 64;
@@ -250,10 +254,17 @@ inline void enumerate_pairs_and_push_hist_u128(
             double vx = x[i] + x[j]; double vy = y[i] + y[j]; double vz = z[i] + z[j];
             double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0; vx/=r; vy/=r; vz/=r;
             double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-            if (return_hist2d) { int ir, id; bin2d(ra_deg, dec_deg, ir, id);
-                H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1; }
+            if (mark_members)
+            {
+                in_cluster[i] = 1;
+                if (j < N) in_cluster[j] = 1;
+            }
+            pair_cnt += 1;
+            int ir, id; bin2d(ra_deg, dec_deg, ir, id);
+            H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
         }
     }
+    return pair_cnt;
 }
 
 // --------------------------- 任意 N（ビット隣接） ---------------------------
@@ -283,8 +294,7 @@ inline long long count_and_hist_triangles_bitadj(
     bool return_hist2d,
     int bins_ra,
     const std::function<void(double, double, int &, int &)> &bin2d,
-    std::vector<std::vector<long long>> &Tri2d_loc,
-    bool tri2d_push_centroid)
+    std::vector<std::vector<long long>> &Tri2d_loc)
 {
     long long tri_cnt = 0;
     for (int i2 = 0; i2 < N - 2; ++i2)
@@ -310,8 +320,8 @@ inline long long count_and_hist_triangles_bitadj(
                         double vx = x[i2] + x[j2] + x[k2]; double vy = y[i2] + y[j2] + y[k2]; double vz = z[i2] + z[j2] + z[k2];
                         double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0; vx/=r; vy/=r; vz/=r;
                         double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-                        if (tri2d_push_centroid) { int ir, id; bin2d(ra_deg, dec_deg, ir, id);
-                            Tri2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1; }
+                        int ir, id; bin2d(ra_deg, dec_deg, ir, id);
+                        Tri2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
                     }
                 }
             }
@@ -387,24 +397,33 @@ inline long long count_k_cliques_bitadj(
     return kcnt;
 }
 
-inline void enumerate_pairs_and_push_hist_bitadj(
+inline long long enumerate_pairs_and_push_hist_bitadj(
     const std::vector<uint64_t> &NB, int N, int W, int tid,
     const std::vector<double> &x, const std::vector<double> &y, const std::vector<double> &z,
-    bool return_hist2d,
+    bool mark_members,
+    std::vector<char> &in_cluster,
     int bins_ra,
     const std::function<void(double, double, int &, int &)> &bin2d,
     std::vector<std::vector<long long>> &H_2d_loc)
 {
+    long long pair_cnt = 0;
     for (int i = 0; i < N - 1; ++i)
         for (int j = i + 1; j < N; ++j)
             if (bit_test_edge(NB, N, W, i, j))
             {
+                if (mark_members)
+                {
+                    in_cluster[i] = 1;
+                    in_cluster[j] = 1;
+                }
+                pair_cnt += 1;
                 double vx = x[i] + x[j]; double vy = y[i] + y[j]; double vz = z[i] + z[j];
                 double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0; vx/=r; vy/=r; vz/=r;
                 double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-                if (return_hist2d) { int ir, id; bin2d(ra_deg, dec_deg, ir, id);
-                    H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1; }
+                int ir, id; bin2d(ra_deg, dec_deg, ir, id);
+                H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
             }
+    return pair_cnt;
 }
 
 // end graph ops
