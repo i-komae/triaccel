@@ -9,18 +9,23 @@
 - k-クリーク（既定はトリプレット）列挙。`cluster_size` を変えてペア/クアッド以上にも対応
 
 ## インストール
-1. 仮想環境を推奨します。
+1. リポジトリを取得します。
+   ```bash
+   git clone https://github.com/i-komae/triaccel.git
+   cd triaccel
+   ```
+2. 仮想環境を推奨します。
    ```bash
    python3 -m venv venv
    source venv/bin/activate
    ```
-2. ルート直下でインストールします。
+3. `triaccel` をインストールします。
    ```bash
    pip install .
    ```
    - Python 3.10 以上と、C++17/pybind11/コンパイラ（macOS なら Xcode Command Line Tools）が必要です。
    - NumPy>=2.0 / Matplotlib>=3.7 が依存関係として入ります。
-3. 動作確認（任意）: `python tutorial/main.py`
+4. 動作確認（任意）: `python tutorial/main.py`
    - `tutorial/` 配下は最小構成のサンプルスクリプトです。好みのパラメータに書き換えて使ってください。
 
 ## クイックスタート
