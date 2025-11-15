@@ -152,7 +152,15 @@ inline long long count_k_cliques_u128(
     const std::vector<uint64_t> &m1,
     int N,
     std::vector<char> *in_cluster,
-    bool debug)
+    bool debug,
+    int tid,
+    const std::vector<double> *x,
+    const std::vector<double> *y,
+    const std::vector<double> *z,
+    bool return_hist2d,
+    int bins_ra,
+    const std::function<void(double, double, int &, int &)> *bin2d,
+    std::vector<std::vector<long long>> *Tri2d_loc)
 {
     long long kcnt = 0;
     std::vector<int> R; R.reserve(K);
@@ -168,7 +176,28 @@ inline long long count_k_cliques_u128(
         if (rsz + psize < K) return;
         if (rsz == K)
         {
-            kcnt += 1; if (debug && in_cluster) for (int v : R) (*in_cluster)[v] = 1; return;
+            kcnt += 1;
+            if (debug && in_cluster)
+                for (int v : R) (*in_cluster)[v] = 1;
+            if (return_hist2d)
+            {
+                double vx = 0.0, vy = 0.0, vz = 0.0;
+                for (int v : R)
+                {
+                    vx += (*x)[v];
+                    vy += (*y)[v];
+                    vz += (*z)[v];
+                }
+                double r = std::sqrt(vx * vx + vy * vy + vz * vz);
+                if (r == 0.0) r = 1.0;
+                vx /= r; vy /= r; vz /= r;
+                double ra_deg, dec_deg;
+                compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
+                int ir, id;
+                (*bin2d)(ra_deg, dec_deg, ir, id);
+                (*Tri2d_loc)[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
+            }
+            return;
         }
         uint64_t Q0 = P0, Q1 = P1;
         while (Q0 || Q1)

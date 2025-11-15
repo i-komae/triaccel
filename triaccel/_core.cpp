@@ -354,23 +354,14 @@ static void process_smallN_trial(
     }
     else
     {
-        long long kcnt = count_k_cliques_u128(cluster_size, B.m0, B.m1, N, &B.in_cluster, debug);
+        long long kcnt = count_k_cliques_u128(
+            cluster_size, B.m0, B.m1, N, &B.in_cluster, debug,
+            tid, &B.x, &B.y, &B.z,
+            /*return_hist2d=*/return_histograms,
+            bins_ra,
+            &bin2d,
+            &Tri2d_loc);
         counts_vec[t] = (int32_t)kcnt;
-        // For k>=4, also push centroid histogram if needed
-        if (return_histograms)
-        {
-            int W_nb = 0;
-            std::vector<uint64_t> NB;
-            masks_to_NB(B.m0, B.m1, N, NB, W_nb);
-            long long dummy = count_k_cliques_bitadj(
-                cluster_size, NB, N, W_nb, &B.in_cluster, debug,
-                tid, &B.x, &B.y, &B.z,
-                /*return_hist2d=*/return_histograms,
-                bins_ra,
-                &bin2d,
-                &Tri2d_loc);
-            (void)dummy;
-        }
     }
 
 

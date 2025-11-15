@@ -13,7 +13,7 @@ res = triaccel.simulate(
     bins=(144, 72),
     return_histograms=SAVE_HIST,
     debug=False,
-    cluster_size=3,
+    cluster_size=4,
 )
 
 # トリプレット確率分布を保存
