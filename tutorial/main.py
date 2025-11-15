@@ -1,7 +1,7 @@
 import triaccel
 
 N_TRIALS = 100_000_000
-SAVE_HIST = True
+SAVE_HIST = False
 
 sites = [{"lat": 39.3, "lon": -112.9, "zmax": 55.0, "n": 32},
          {"lat": -35.2, "lon": -69.2, "zmax": 60.0, "n": 35}]
@@ -13,7 +13,7 @@ res = triaccel.simulate(
     bins=(144, 72),
     return_histograms=SAVE_HIST,
     debug=False,
-    cluster_size=4,
+    cluster_size=3,
 )
 
 # トリプレット確率分布を保存
