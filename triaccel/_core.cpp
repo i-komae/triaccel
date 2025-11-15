@@ -311,28 +311,7 @@ static void process_smallN_trial(
                      t + 1, M, edges, dmin, (N ? dsum / N : 0.0), dmax);
     }
 
-    if (cluster_size == 3)
-    {
-        long long tri_cnt;
-        if (return_histograms)
-        {
-            tri_cnt = enumerate_triangles_hist_from_masks_u128(
-                N, tid,
-                B.x, B.y, B.z,
-                B.m0, B.m1,
-                /*mark_members=*/debug,
-                B.in_cluster,
-                bins_ra,
-                bin2d,
-                Tri2d_loc);
-        }
-        else
-        {
-            tri_cnt = count_triangles_u128(B.m0, B.m1);
-        }
-        counts_vec[t] = (int32_t)tri_cnt;
-    }
-    else if (cluster_size == 2)
+    if (cluster_size == 2)
     {
         long long pair_cnt;
         if (return_histograms)
@@ -575,19 +554,7 @@ static void process_largeN_trial(
                      t + 1, M, edges_undirected, dmin, (N ? sum / N : 0.0), dmax);
     }
 
-    if (cluster_size == 3)
-    {
-        long long tri_cnt_gen = count_and_hist_triangles_bitadj(
-            NB, N, W, tid,
-            B.x, B.y, B.z,
-            debug, B.in_cluster,
-            return_histograms,
-            bins_ra,
-            bin2d,
-            Tri2d_loc);
-        counts_vec[t] = (int32_t)tri_cnt_gen;
-    }
-    else if (cluster_size == 2)
+    if (cluster_size == 2)
     {
         long long pair_cnt;
         if (return_histograms)

@@ -37,34 +37,6 @@ inline void build_masks_u128(const std::vector<double> &x,
     }
 }
 
-inline long long count_triangles_u128(const std::vector<uint64_t> &m0,
-                                      const std::vector<uint64_t> &m1)
-{
-    int N = (int)m0.size();
-    long long cnt = 0;
-    for (int i = 0; i < N - 2; ++i)
-    {
-        for (int j = i + 1; j < N - 1; ++j)
-        {
-            bool ij = (j < 64) ? (((m0[i] >> j) & 1ULL) != 0ULL)
-                               : (((m1[i] >> (j - 64)) & 1ULL) != 0ULL);
-            if (!ij) continue;
-            uint64_t c0 = m0[i] & m0[j];
-            uint64_t c1 = m1[i] & m1[j];
-            if (j < 63)
-                c0 &= ~(((1ULL) << (j + 1)) - 1ULL);
-            else if (j == 63)
-                c0 = 0ULL;
-            else
-            {
-                c0 = 0ULL; int jb = j - 64; c1 &= ~(((1ULL) << (jb + 1)) - 1ULL);
-            }
-            cnt += pop64(c0) + pop64(c1);
-        }
-    }
-    return cnt;
-}
-
 inline long long count_pairs_u128(const std::vector<uint64_t> &m0,
                                   const std::vector<uint64_t> &m1,
                                   int N,
@@ -79,67 +51,6 @@ inline long long count_pairs_u128(const std::vector<uint64_t> &m0,
         if (debug && in_cluster && di > 0) (*in_cluster)[i] = 1;
     }
     return deg_sum / 2;
-}
-
-inline long long enumerate_triangles_hist_from_masks_u128(
-    int N, int tid,
-    const std::vector<double> &x,
-    const std::vector<double> &y,
-    const std::vector<double> &z,
-    const std::vector<uint64_t> &m0,
-    const std::vector<uint64_t> &m1,
-    bool mark_members,
-    std::vector<char> &in_cluster,
-    int bins_ra,
-    const std::function<void(double, double, int &, int &)> &bin2d,
-    std::vector<std::vector<long long>> &Tri2d_loc)
-{
-    long long tri_cnt = 0;
-    for (int i = 0; i < N - 2; ++i)
-    {
-        for (int j = i + 1; j < N - 1; ++j)
-        {
-            bool ij = (j < 64) ? (((m0[i] >> j) & 1ULL) != 0ULL)
-                               : (((m1[i] >> (j - 64)) & 1ULL) != 0ULL);
-            if (!ij) continue;
-            uint64_t c0 = m0[i] & m0[j];
-            uint64_t c1 = m1[i] & m1[j];
-            if (j < 63) c0 &= ~(((1ULL) << (j + 1)) - 1ULL);
-            else if (j == 63) c0 = 0ULL;
-            else { c0 = 0ULL; int jb = j - 64; c1 &= ~(((1ULL) << (jb + 1)) - 1ULL); }
-            while (c0)
-            {
-                int k = ctz64(c0); c0 &= (c0 - 1);
-                if (mark_members) { in_cluster[i] = in_cluster[j] = in_cluster[k] = 1; }
-                // push histogram
-                double vx = x[i] + x[j] + x[k];
-                double vy = y[i] + y[j] + y[k];
-                double vz = z[i] + z[j] + z[k];
-                double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0;
-                vx/=r; vy/=r; vz/=r;
-                double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-                tri_cnt += 1;
-                int ir, id; bin2d(ra_deg, dec_deg, ir, id);
-                Tri2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
-            }
-            const int base = 64;
-            while (c1)
-            {
-                int kb = ctz64(c1); c1 &= (c1 - 1); int k = base + kb; if (k >= N) continue;
-                if (mark_members) { in_cluster[i] = in_cluster[j] = in_cluster[k] = 1; }
-                double vx = x[i] + x[j] + x[k];
-                double vy = y[i] + y[j] + y[k];
-                double vz = z[i] + z[j] + z[k];
-                double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0;
-                vx/=r; vy/=r; vz/=r;
-                double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-                tri_cnt += 1;
-                int ir, id; bin2d(ra_deg, dec_deg, ir, id);
-                Tri2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
-            }
-        }
-    }
-    return tri_cnt;
 }
 
 inline long long count_k_cliques_u128(
