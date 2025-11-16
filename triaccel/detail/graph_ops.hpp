@@ -451,6 +451,8 @@ inline long long count_k_cliques_bitadj(
     long long kcnt = 0;
     std::vector<int> R;
     R.reserve(K);
+    std::vector<uint64_t> cand(W);
+    std::vector<std::vector<uint64_t>> tmp_pool((size_t)K, std::vector<uint64_t>(W));
     auto pop_bits = [&](const std::vector<uint64_t> &A) -> long long
     {
         long long s = 0;
@@ -527,10 +529,9 @@ inline long long count_k_cliques_bitadj(
             }
             return;
         }
-        std::vector<uint64_t> Q = P;
         for (int w = 0; w < W; ++w)
         {
-            uint64_t mask = Q[(size_t)w];
+            uint64_t mask = P[(size_t)w];
             while (mask)
             {
                 int b = ctz64(mask);
@@ -541,7 +542,7 @@ inline long long count_k_cliques_bitadj(
                     continue;
                 }
                 R.push_back(v);
-                std::vector<uint64_t> NP(W);
+                std::vector<uint64_t> &NP = tmp_pool[(size_t)rsz];
                 for (int ww = 0; ww < W; ++ww)
                 {
                     NP[(size_t)ww] = P[(size_t)ww] & NB[(size_t)v * (size_t)W + (size_t)ww];
@@ -554,14 +555,13 @@ inline long long count_k_cliques_bitadj(
     };
     for (int v0 = 0; v0 < N; ++v0)
     {
-        std::vector<uint64_t> P(W);
         for (int w = 0; w < W; ++w)
         {
-            P[(size_t)w] = NB[(size_t)v0 * (size_t)W + (size_t)w];
+            cand[(size_t)w] = NB[(size_t)v0 * (size_t)W + (size_t)w];
         }
-        mask_gt_assign(P, v0);
+        mask_gt_assign(cand, v0);
         R.push_back(v0);
-        dfs(P);
+        dfs(cand);
         R.pop_back();
     }
     return kcnt;
