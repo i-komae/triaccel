@@ -311,37 +311,14 @@ static void process_smallN_trial(
                      t + 1, M, edges, dmin, (N ? dsum / N : 0.0), dmax);
     }
 
-    if (cluster_size == 2)
-    {
-        long long pair_cnt;
-        if (return_histograms)
-        {
-            pair_cnt = enumerate_pairs_and_push_hist_u128(
-                N, tid, B.m0, B.m1,
-                B.x, B.y, B.z,
-                /*mark_members=*/debug,
-                B.in_cluster,
-                bins_ra,
-                bin2d,
-                Tri2d_loc);
-        }
-        else
-        {
-            pair_cnt = count_pairs_u128(B.m0, B.m1, N, &B.in_cluster, debug);
-        }
-        counts_vec[t] = (int32_t)pair_cnt;
-    }
-    else
-    {
-        long long kcnt = count_k_cliques_u128(
-            cluster_size, B.m0, B.m1, N, &B.in_cluster, debug,
-            tid, &B.x, &B.y, &B.z,
-            return_histograms,
-            bins_ra,
-            &bin2d,
-            &Tri2d_loc);
-        counts_vec[t] = (int32_t)kcnt;
-    }
+    long long kcnt = count_k_cliques_u128(
+        cluster_size, B.m0, B.m1, N, &B.in_cluster, debug,
+        tid, &B.x, &B.y, &B.z,
+        return_histograms,
+        bins_ra,
+        &bin2d,
+        &Tri2d_loc);
+    counts_vec[t] = (int32_t)kcnt;
 
 
     if (debug)
@@ -559,7 +536,7 @@ static void process_largeN_trial(
         long long pair_cnt;
         if (return_histograms)
         {
-            pair_cnt = enumerate_pairs_and_push_hist_bitadj(
+            pair_cnt = count_pairs_hist_bitadj(
                 NB, N, W, tid,
                 B.x, B.y, B.z,
                 /*mark_members=*/debug,
