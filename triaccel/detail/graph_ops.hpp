@@ -30,8 +30,22 @@ inline void build_masks_u128(const std::vector<double> &x,
             double dot = xi * x[j] + yi * y[j] + zi * z[j];
             if (dot >= cos_thr)
             {
-                if (j < 64) m0[i] |= (1ULL << j); else m1[i] |= (1ULL << (j - 64));
-                if (i < 64) m0[j] |= (1ULL << i); else m1[j] |= (1ULL << (i - 64));
+                if (j < 64)
+                {
+                    m0[i] |= (1ULL << j);
+                }
+                else
+                {
+                    m1[i] |= (1ULL << (j - 64));
+                }
+                if (i < 64)
+                {
+                    m0[j] |= (1ULL << i);
+                }
+                else
+                {
+                    m1[j] |= (1ULL << (i - 64));
+                }
             }
         }
     }
@@ -55,8 +69,14 @@ inline void push_hist_from_vertices_u128(const int *verts,
         vy += y[v];
         vz += z[v];
     }
-    double r = std::sqrt(vx * vx + vy * vy + vz * vz); if (r == 0.0) r = 1.0;
-    vx /= r; vy /= r; vz /= r;
+    double r = std::sqrt(vx * vx + vy * vy + vz * vz);
+    if (r == 0.0)
+    {
+        r = 1.0;
+    }
+    vx /= r;
+    vy /= r;
+    vz /= r;
     double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
     int ir, id; bin2d(ra_deg, dec_deg, ir, id);
     H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
@@ -78,7 +98,11 @@ inline long long count_pairs_hist_u128(
     long long pair_cnt = 0;
     for (int i = 0; i < N - 1; ++i)
     {
-        uint64_t a0 = (i < 63) ? (m0[i] & ~(((1ULL) << (i + 1)) - 1ULL)) : 0ULL;
+        uint64_t a0 = 0ULL;
+        if (i < 63)
+        {
+            a0 = m0[i] & ~(((1ULL) << (i + 1)) - 1ULL);
+        }
         while (a0)
         {
             int j = ctz64(a0); a0 &= (a0 - 1);
@@ -91,15 +115,36 @@ inline long long count_pairs_hist_u128(
             int verts[2] = {i, j};
             push_hist_from_vertices_u128(verts, 2, x, y, z, bins_ra, bin2d, H_2d_loc, tid);
         }
-        uint64_t a1 = m1[i]; if (i >= 64) { int ib = i - 64; if (ib < 63) a1 &= ~(((1ULL) << (ib + 1)) - 1ULL); else a1 = 0ULL; }
+        uint64_t a1 = m1[i];
+        if (i >= 64)
+        {
+            int ib = i - 64;
+            if (ib < 63)
+            {
+                a1 &= ~(((1ULL) << (ib + 1)) - 1ULL);
+            }
+            else
+            {
+                a1 = 0ULL;
+            }
+        }
         const int base = 64;
         while (a1)
         {
-            int jb = ctz64(a1); a1 &= (a1 - 1); int j = base + jb; if (j >= N) continue;
+            int jb = ctz64(a1);
+            a1 &= (a1 - 1);
+            int j = base + jb;
+            if (j >= N)
+            {
+                continue;
+            }
             if (mark_members)
             {
                 in_cluster[i] = 1;
-                if (j < N) in_cluster[j] = 1;
+                if (j < N)
+                {
+                    in_cluster[j] = 1;
+                }
             }
             pair_cnt += 1;
             int verts[2] = {i, j};
@@ -120,7 +165,10 @@ inline long long count_pairs_u128(const std::vector<uint64_t> &m0,
     {
         int di = pop64(m0[i]) + pop64(m1[i]);
         deg_sum += di;
-        if (debug && in_cluster && di > 0) (*in_cluster)[i] = 1;
+        if (debug && in_cluster && di > 0)
+        {
+            (*in_cluster)[i] = 1;
+        }
     }
     return deg_sum / 2;
 }
@@ -145,29 +193,72 @@ inline long long count_k_cliques_hist_u128(
     std::vector<int> R; R.reserve(K);
     auto mask_gt = [&](uint64_t &a0, uint64_t &a1, int thr)
     {
-        if (thr < 63) a0 &= ~(((1ULL) << (thr + 1)) - 1ULL);
-        else if (thr == 63) { a0 = 0ULL; }
-        else { a0 = 0ULL; int jb = thr - 64; if (jb < 63) a1 &= ~(((1ULL) << (jb + 1)) - 1ULL); else a1 = 0ULL; }
+        if (thr < 63)
+        {
+            a0 &= ~(((1ULL) << (thr + 1)) - 1ULL);
+        }
+        else if (thr == 63)
+        {
+            a0 = 0ULL;
+        }
+        else
+        {
+            a0 = 0ULL;
+            int jb = thr - 64;
+            if (jb < 63)
+            {
+                a1 &= ~(((1ULL) << (jb + 1)) - 1ULL);
+            }
+            else
+            {
+                a1 = 0ULL;
+            }
+        }
     };
     std::function<void(uint64_t, uint64_t)> dfs = [&](uint64_t P0, uint64_t P1)
     {
-        int rsz = (int)R.size(); int psize = pop64(P0) + pop64(P1);
-        if (rsz + psize < K) return;
+        int rsz = (int)R.size();
+        int psize = pop64(P0) + pop64(P1);
+        if (rsz + psize < K)
+        {
+            return;
+        }
         if (rsz == K)
         {
             kcnt += 1;
             if (debug && in_cluster)
-                for (int v : R) (*in_cluster)[v] = 1;
+            {
+                for (int v : R)
+                {
+                    (*in_cluster)[v] = 1;
+                }
+            }
             push_hist_from_vertices_u128(
                 R.data(), K, x, y, z,
                 bins_ra, bin2d, Tri2d_loc, tid);
             return;
         }
-        uint64_t Q0 = P0, Q1 = P1;
+        uint64_t Q0 = P0;
+        uint64_t Q1 = P1;
         while (Q0 || Q1)
         {
-            int v; if (Q0) { int b = ctz64(Q0); Q0 &= (Q0 - 1); v = b; }
-            else { int b = ctz64(Q1); Q1 &= (Q1 - 1); v = 64 + b; if (v >= N) continue; }
+            int v;
+            if (Q0)
+            {
+                int b = ctz64(Q0);
+                Q0 &= (Q0 - 1);
+                v = b;
+            }
+            else
+            {
+                int b = ctz64(Q1);
+                Q1 &= (Q1 - 1);
+                v = 64 + b;
+                if (v >= N)
+                {
+                    continue;
+                }
+            }
             R.push_back(v);
             uint64_t NP0 = m0[v] & P0; uint64_t NP1 = m1[v] & P1; mask_gt(NP0, NP1, v);
             dfs(NP0, NP1); R.pop_back();
@@ -194,26 +285,69 @@ inline long long count_k_cliques_nohist_u128(
     std::vector<int> R; R.reserve(K);
     auto mask_gt = [&](uint64_t &a0, uint64_t &a1, int thr)
     {
-        if (thr < 63) a0 &= ~(((1ULL) << (thr + 1)) - 1ULL);
-        else if (thr == 63) { a0 = 0ULL; }
-        else { a0 = 0ULL; int jb = thr - 64; if (jb < 63) a1 &= ~(((1ULL) << (jb + 1)) - 1ULL); else a1 = 0ULL; }
+        if (thr < 63)
+        {
+            a0 &= ~(((1ULL) << (thr + 1)) - 1ULL);
+        }
+        else if (thr == 63)
+        {
+            a0 = 0ULL;
+        }
+        else
+        {
+            a0 = 0ULL;
+            int jb = thr - 64;
+            if (jb < 63)
+            {
+                a1 &= ~(((1ULL) << (jb + 1)) - 1ULL);
+            }
+            else
+            {
+                a1 = 0ULL;
+            }
+        }
     };
     std::function<void(uint64_t, uint64_t)> dfs = [&](uint64_t P0, uint64_t P1)
     {
-        int rsz = (int)R.size(); int psize = pop64(P0) + pop64(P1);
-        if (rsz + psize < K) return;
+        int rsz = (int)R.size();
+        int psize = pop64(P0) + pop64(P1);
+        if (rsz + psize < K)
+        {
+            return;
+        }
         if (rsz == K)
         {
             kcnt += 1;
             if (debug && in_cluster)
-                for (int v : R) (*in_cluster)[v] = 1;
+            {
+                for (int v : R)
+                {
+                    (*in_cluster)[v] = 1;
+                }
+            }
             return;
         }
-        uint64_t Q0 = P0, Q1 = P1;
+        uint64_t Q0 = P0;
+        uint64_t Q1 = P1;
         while (Q0 || Q1)
         {
-            int v; if (Q0) { int b = ctz64(Q0); Q0 &= (Q0 - 1); v = b; }
-            else { int b = ctz64(Q1); Q1 &= (Q1 - 1); v = 64 + b; if (v >= N) continue; }
+            int v;
+            if (Q0)
+            {
+                int b = ctz64(Q0);
+                Q0 &= (Q0 - 1);
+                v = b;
+            }
+            else
+            {
+                int b = ctz64(Q1);
+                Q1 &= (Q1 - 1);
+                v = 64 + b;
+                if (v >= N)
+                {
+                    continue;
+                }
+            }
             R.push_back(v);
             uint64_t NP0 = m0[v] & P0; uint64_t NP1 = m1[v] & P1; mask_gt(NP0, NP1, v);
             dfs(NP0, NP1); R.pop_back();
@@ -269,13 +403,32 @@ inline long long count_k_cliques_u128(
 
 // --------------------------- 任意 N（ビット隣接） ---------------------------
 inline bool bit_test_edge(const std::vector<uint64_t> &NB, int N, int W, int a, int b)
-{ (void)N; int wb = b >> 6; int bb = b & 63; return ((NB[(size_t)a * (size_t)W + (size_t)wb] >> bb) & 1ULL) != 0ULL; }
+{
+    (void)N;
+    int wb = b >> 6;
+    int bb = b & 63;
+    return ((NB[(size_t)a * (size_t)W + (size_t)wb] >> bb) & 1ULL) != 0ULL;
+}
 
 inline long long count_pairs_bitadj(const std::vector<uint64_t> &NB, int N, int W,
                                     std::vector<char> *in_cluster, bool debug)
 {
-    long long pair_cnt = 0; for (int i = 0; i < N; ++i) for (int j = i + 1; j < N; ++j)
-        if (bit_test_edge(NB, N, W, i, j)) { pair_cnt += 1; if (debug && in_cluster) { (*in_cluster)[i] = 1; (*in_cluster)[j] = 1; } }
+    long long pair_cnt = 0;
+    for (int i = 0; i < N; ++i)
+    {
+        for (int j = i + 1; j < N; ++j)
+        {
+            if (bit_test_edge(NB, N, W, i, j))
+            {
+                pair_cnt += 1;
+                if (debug && in_cluster)
+                {
+                    (*in_cluster)[i] = 1;
+                    (*in_cluster)[j] = 1;
+                }
+            }
+        }
+    }
     return pair_cnt;
 }
 
@@ -295,29 +448,81 @@ inline long long count_k_cliques_bitadj(
     const std::function<void(double, double, int &, int &)> *bin2d,
     std::vector<std::vector<long long>> *H_2d_loc)
 {
-    long long kcnt = 0; std::vector<int> R; R.reserve(K);
-    auto pop_bits = [&](const std::vector<uint64_t> &A)->long long { long long s = 0; for (uint64_t w : A) s += pop64(w); return s; };
+    long long kcnt = 0;
+    std::vector<int> R;
+    R.reserve(K);
+    auto pop_bits = [&](const std::vector<uint64_t> &A) -> long long
+    {
+        long long s = 0;
+        for (uint64_t w : A)
+        {
+            s += pop64(w);
+        }
+        return s;
+    };
     auto mask_gt_assign = [&](std::vector<uint64_t> &P, int thr)
     {
-        int wthr = thr >> 6; int bthr = thr & 63;
-        for (int w = 0; w < wthr; ++w) P[(size_t)w] = 0ULL;
-        uint64_t lowmask = (bthr == 63) ? ~0ULL : ((1ULL << (bthr + 1)) - 1ULL);
+        int wthr = thr >> 6;
+        int bthr = thr & 63;
+        for (int w = 0; w < wthr; ++w)
+        {
+            P[(size_t)w] = 0ULL;
+        }
+        uint64_t lowmask = 0ULL;
+        if (bthr == 63)
+        {
+            lowmask = ~0ULL;
+        }
+        else
+        {
+            lowmask = (1ULL << (bthr + 1)) - 1ULL;
+        }
         P[(size_t)wthr] &= ~lowmask;
     };
-    std::function<void(std::vector<uint64_t>&)> dfs;
+    std::function<void(std::vector<uint64_t> &)> dfs;
     dfs = [&](std::vector<uint64_t> &P)
     {
-        int rsz = (int)R.size(); long long psize = pop_bits(P);
-        if (rsz + psize < K) return;
+        int rsz = (int)R.size();
+        long long psize = pop_bits(P);
+        if (rsz + psize < K)
+        {
+            return;
+        }
         if (rsz == K)
         {
-            kcnt += 1; if (debug && in_cluster) for (int v : R) (*in_cluster)[v] = 1;
+            kcnt += 1;
+            if (debug && in_cluster)
+            {
+                for (int v : R)
+                {
+                    (*in_cluster)[v] = 1;
+                }
+            }
             if (return_hist2d)
             {
-                double vx = 0.0, vy = 0.0, vz = 0.0; for (int v : R) { vx += (*x)[v]; vy += (*y)[v]; vz += (*z)[v]; }
-                double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0; vx/=r; vy/=r; vz/=r;
-                double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-                int ir, id; (*bin2d)(ra_deg, dec_deg, ir, id);
+                double vx = 0.0;
+                double vy = 0.0;
+                double vz = 0.0;
+                for (int v : R)
+                {
+                    vx += (*x)[v];
+                    vy += (*y)[v];
+                    vz += (*z)[v];
+                }
+                double r = std::sqrt(vx * vx + vy * vy + vz * vz);
+                if (r == 0)
+                {
+                    r = 1.0;
+                }
+                vx /= r;
+                vy /= r;
+                vz /= r;
+                double ra_deg;
+                double dec_deg;
+                compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
+                int ir;
+                int id;
+                (*bin2d)(ra_deg, dec_deg, ir, id);
                 (*H_2d_loc)[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
             }
             return;
@@ -328,10 +533,19 @@ inline long long count_k_cliques_bitadj(
             uint64_t mask = Q[(size_t)w];
             while (mask)
             {
-                int b = ctz64(mask); mask &= (mask - 1); int v = (w << 6) + b; if (v >= N) continue;
+                int b = ctz64(mask);
+                mask &= (mask - 1);
+                int v = (w << 6) + b;
+                if (v >= N)
+                {
+                    continue;
+                }
                 R.push_back(v);
                 std::vector<uint64_t> NP(W);
-                for (int ww = 0; ww < W; ++ww) NP[(size_t)ww] = P[(size_t)ww] & NB[(size_t)v * (size_t)W + (size_t)ww];
+                for (int ww = 0; ww < W; ++ww)
+                {
+                    NP[(size_t)ww] = P[(size_t)ww] & NB[(size_t)v * (size_t)W + (size_t)ww];
+                }
                 mask_gt_assign(NP, v);
                 dfs(NP);
                 R.pop_back();
@@ -340,8 +554,15 @@ inline long long count_k_cliques_bitadj(
     };
     for (int v0 = 0; v0 < N; ++v0)
     {
-        std::vector<uint64_t> P(W); for (int w = 0; w < W; ++w) P[(size_t)w] = NB[(size_t)v0 * (size_t)W + (size_t)w];
-        mask_gt_assign(P, v0); R.push_back(v0); dfs(P); R.pop_back();
+        std::vector<uint64_t> P(W);
+        for (int w = 0; w < W; ++w)
+        {
+            P[(size_t)w] = NB[(size_t)v0 * (size_t)W + (size_t)w];
+        }
+        mask_gt_assign(P, v0);
+        R.push_back(v0);
+        dfs(P);
+        R.pop_back();
     }
     return kcnt;
 }
@@ -357,7 +578,9 @@ inline long long count_pairs_hist_bitadj(
 {
     long long pair_cnt = 0;
     for (int i = 0; i < N - 1; ++i)
+    {
         for (int j = i + 1; j < N; ++j)
+        {
             if (bit_test_edge(NB, N, W, i, j))
             {
                 if (mark_members)
@@ -366,12 +589,27 @@ inline long long count_pairs_hist_bitadj(
                     in_cluster[j] = 1;
                 }
                 pair_cnt += 1;
-                double vx = x[i] + x[j]; double vy = y[i] + y[j]; double vz = z[i] + z[j];
-                double r = std::sqrt(vx*vx + vy*vy + vz*vz); if (r == 0) r = 1.0; vx/=r; vy/=r; vz/=r;
-                double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-                int ir, id; bin2d(ra_deg, dec_deg, ir, id);
+                double vx = x[i] + x[j];
+                double vy = y[i] + y[j];
+                double vz = z[i] + z[j];
+                double r = std::sqrt(vx * vx + vy * vy + vz * vz);
+                if (r == 0)
+                {
+                    r = 1.0;
+                }
+                vx /= r;
+                vy /= r;
+                vz /= r;
+                double ra_deg;
+                double dec_deg;
+                compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
+                int ir;
+                int id;
+                bin2d(ra_deg, dec_deg, ir, id);
                 H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
             }
+        }
+    }
     return pair_cnt;
 }
 

@@ -194,27 +194,36 @@ static void dump_k_cliques_u128(
     int N,
     std::ofstream &cf)
 {
-    if (K < 2 || N <= 0) return;
+    if (K < 2 || N <= 0)
+    {
+        return;
+    }
 
     auto and_with_nb = [&](uint64_t c0, uint64_t c1, int v, uint64_t &o0, uint64_t &o1) {
         o0 = c0 & m0[v];
         o1 = c1 & m1[v];
     };
     auto mask_gt = [&](int v, uint64_t &c0, uint64_t &c1) {
-        // インデックス > v だけ残す
-        if (v < 63) {
+        if (v < 63)
+        {
             uint64_t mask0 = ~((1ULL << (v + 1)) - 1ULL);
             c0 &= mask0;
-            // c1 はそのまま
-        } else if (v == 63) {
-            c0 = 0ULL; // 0..63 は全て落とす
-        } else { // v>=64
+        }
+        else if (v == 63)
+        {
+            c0 = 0ULL;
+        }
+        else
+        {
             c0 = 0ULL;
             unsigned vb = (unsigned)(v - 64);
-            if (vb < 63) {
+            if (vb < 63)
+            {
                 uint64_t mask1 = ~((1ULL << (vb + 1)) - 1ULL);
                 c1 &= mask1;
-            } else {
+            }
+            else
+            {
                 c1 = 0ULL;
             }
         }
@@ -223,37 +232,53 @@ static void dump_k_cliques_u128(
     std::vector<int> cur;
     cur.reserve(K);
 
-    std::function<void(int,int,uint64_t,uint64_t)> dfs = [&](int last, int depth, uint64_t c0, uint64_t c1) {
-        if (depth == K) {
-            // 出力
-            for (int i = 0; i < K; ++i) {
-                if (i) cf << '\t';
+    std::function<void(int, int, uint64_t, uint64_t)> dfs = [&](int last, int depth, uint64_t c0, uint64_t c1)
+    {
+        if (depth == K)
+        {
+            for (int i = 0; i < K; ++i)
+            {
+                if (i)
+                {
+                    cf << '\t';
+                }
                 cf << cur[i];
             }
             cf << '\n';
             return;
         }
-        // 枝刈り（候補の個数 < 残り必要数）
         int remain = K - depth;
         int cand_cnt = (int)pop64(c0) + (int)pop64(c1);
-        if (cand_cnt < remain) return;
-        // 低位ビットから順に展開
-        uint64_t t0 = c0, t1 = c1;
-        while (t0) {
+        if (cand_cnt < remain)
+        {
+            return;
+        }
+        uint64_t t0 = c0;
+        uint64_t t1 = c1;
+        while (t0)
+        {
             unsigned b = (unsigned)__builtin_ctzll(t0);
             int v = (int)b;
-            uint64_t n0, n1; and_with_nb(c0, c1, v, n0, n1);
+            uint64_t n0;
+            uint64_t n1;
+            and_with_nb(c0, c1, v, n0, n1);
             mask_gt(v, n0, n1);
             cur.push_back(v);
             dfs(v, depth + 1, n0, n1);
             cur.pop_back();
             t0 &= (t0 - 1ULL);
         }
-        while (t1) {
+        while (t1)
+        {
             unsigned b = (unsigned)__builtin_ctzll(t1);
             int v = 64 + (int)b;
-            if (v >= N) break;
-            uint64_t n0, n1; and_with_nb(c0, c1, v, n0, n1);
+            if (v >= N)
+            {
+                break;
+            }
+            uint64_t n0;
+            uint64_t n1;
+            and_with_nb(c0, c1, v, n0, n1);
             mask_gt(v, n0, n1);
             cur.push_back(v);
             dfs(v, depth + 1, n0, n1);
@@ -263,11 +288,13 @@ static void dump_k_cliques_u128(
     };
 
     // 先頭頂点を 0..N-1 で回す（候補は近傍に限定）
-    for (int v = 0; v < N; ++v) {
+    for (int v = 0; v < N; ++v)
+    {
         uint64_t c0 = m0[v];
         uint64_t c1 = m1[v];
         mask_gt(v, c0, c1);
-        cur.clear(); cur.push_back(v);
+        cur.clear();
+        cur.push_back(v);
         dfs(v, 1, c0, c1);
     }
 }
@@ -306,9 +333,14 @@ static void process_smallN_trial(
             if (di > dmax) dmax = di;
         }
         edges = (long long)(dsum / 2.0);
+        double davg = 0.0;
+        if (N != 0)
+        {
+            davg = dsum / N;
+        }
         std::fprintf(stderr,
                      "t=%d/%d build adjacency (edges=%lld, deg[min/avg/max]=%d/%.2f/%d)\n",
-                     t + 1, M, edges, dmin, (N ? dsum / N : 0.0), dmax);
+                     t + 1, M, edges, dmin, davg, dmax);
     }
 
     long long kcnt = count_k_cliques_u128(
@@ -323,9 +355,14 @@ static void process_smallN_trial(
 
     if (debug)
     {
+        const char *fastpath = "false";
+        if (cluster_size == 3)
+        {
+            fastpath = "true";
+        }
         std::fprintf(stderr,
                      "t=%d/%d count k-cliques (k=%d, fastpath=%s)\n",
-                     t + 1, M, cluster_size, (cluster_size == 3 ? "true" : "false"));
+                     t + 1, M, cluster_size, fastpath);
         try
         {
             char evname[64];
@@ -355,33 +392,50 @@ static void process_smallN_trial(
                 {
                     for (int j0 = i0 + 1; j0 < N; ++j0)
                     {
-                        if (!has_edge(i0, j0)) continue;
+                        if (!has_edge(i0, j0))
+                        {
+                            continue;
+                        }
                         uint64_t c0 = B.m0[i0] & B.m0[j0];
                         uint64_t c1 = B.m1[i0] & B.m1[j0];
                         if (j0 < 64)
                         {
-                            uint64_t mask_lo = (j0 < 63) ? ~((1ULL << (j0 + 1)) - 1ULL) : 0ULL;
+                            uint64_t mask_lo = 0ULL;
+                            if (j0 < 63)
+                            {
+                                mask_lo = ~((1ULL << (j0 + 1)) - 1ULL);
+                            }
                             c0 &= mask_lo;
                         }
                         else
                         {
                             c0 = 0ULL;
                             unsigned jb = (unsigned)(j0 - 64);
-                            uint64_t mask_hi = (jb < 63) ? ~((1ULL << (jb + 1)) - 1ULL) : 0ULL;
+                            uint64_t mask_hi = 0ULL;
+                            if (jb < 63)
+                            {
+                                mask_hi = ~((1ULL << (jb + 1)) - 1ULL);
+                            }
                             c1 &= mask_hi;
                         }
                         while (c0)
                         {
                             unsigned b = (unsigned)__builtin_ctzll(c0);
                             int k = (int)b;
-                            if (k < N) { cf << i0 << '\t' << j0 << '\t' << k << '\n'; }
+                            if (k < N)
+                            {
+                                cf << i0 << '\t' << j0 << '\t' << k << '\n';
+                            }
                             c0 &= (c0 - 1ULL);
                         }
                         while (c1)
                         {
                             unsigned b = (unsigned)__builtin_ctzll(c1);
                             int k = 64 + (int)b;
-                            if (k < N) { cf << i0 << '\t' << j0 << '\t' << k << '\n'; }
+                            if (k < N)
+                            {
+                                cf << i0 << '\t' << j0 << '\t' << k << '\n';
+                            }
                             c1 &= (c1 - 1ULL);
                         }
                     }
@@ -422,44 +476,90 @@ static void dump_k_cliques_bitadj(
     int W,
     std::ofstream &cf)
 {
-    if (K < 2 || N <= 0) return;
+    if (K < 2 || N <= 0)
+    {
+        return;
+    }
 
-    auto and_row = [&](const std::vector<uint64_t> &a, int v, std::vector<uint64_t> &o) {
+    auto and_row = [&](const std::vector<uint64_t> &a, int v, std::vector<uint64_t> &o)
+    {
         const uint64_t *row = &NB[(size_t)v * (size_t)W];
-        for (int w = 0; w < W; ++w) o[w] = a[w] & row[w];
+        for (int w = 0; w < W; ++w)
+        {
+            o[w] = a[w] & row[w];
+        }
     };
-    auto mask_gt = [&](int v, std::vector<uint64_t> &c) {
-        int wb = v >> 6; int bb = v & 63;
-        for (int w = 0; w < W; ++w) {
-            if (w < wb) c[w] = 0ULL;
-            else if (w == wb) {
-                uint64_t mask = (bb < 63) ? ~((1ULL << (bb + 1)) - 1ULL) : 0ULL;
-                c[w] &= mask;
+    auto mask_gt = [&](int v, std::vector<uint64_t> &c)
+    {
+        int wb = v >> 6;
+        int bb = v & 63;
+        for (int w = 0; w < W; ++w)
+        {
+            if (w < wb)
+            {
+                c[w] = 0ULL;
+            }
+            else if (w == wb)
+            {
+                if (bb < 63)
+                {
+                    uint64_t mask = ~((1ULL << (bb + 1)) - 1ULL);
+                    c[w] &= mask;
+                }
+                else
+                {
+                    c[w] = 0ULL;
+                }
             }
         }
-        // 上位語はそのまま
     };
-    auto popcnt_vec = [&](const std::vector<uint64_t> &a) {
-        int s = 0; for (int w = 0; w < W; ++w) s += (int)pop64(a[w]); return s;
+    auto popcnt_vec = [&](const std::vector<uint64_t> &a)
+    {
+        int s = 0;
+        for (int w = 0; w < W; ++w)
+        {
+            s += (int)pop64(a[w]);
+        }
+        return s;
     };
 
-    std::vector<int> cur; cur.reserve(K);
-    std::vector<uint64_t> cand(W), next(W);
+    std::vector<int> cur;
+    cur.reserve(K);
+    std::vector<uint64_t> cand(W);
+    std::vector<uint64_t> next(W);
 
-    std::function<void(int,int,const std::vector<uint64_t>&)> dfs =
-    [&](int last, int depth, const std::vector<uint64_t> &c) {
-        if (depth == K) {
-            for (int i = 0; i < K; ++i) { if (i) cf << '\t'; cf << cur[i]; } cf << '\n';
+    std::function<void(int, int, const std::vector<uint64_t> &)> dfs =
+        [&](int last, int depth, const std::vector<uint64_t> &c)
+    {
+        if (depth == K)
+        {
+            for (int i = 0; i < K; ++i)
+            {
+                if (i)
+                {
+                    cf << '\t';
+                }
+                cf << cur[i];
+            }
+            cf << '\n';
             return;
         }
-        int remain = K - depth; if (popcnt_vec(c) < remain) return;
-        // 語ごとに走査
-        for (int w = 0; w < W; ++w) {
+        int remain = K - depth;
+        if (popcnt_vec(c) < remain)
+        {
+            return;
+        }
+        for (int w = 0; w < W; ++w)
+        {
             uint64_t bits = c[w];
-            while (bits) {
+            while (bits)
+            {
                 unsigned b = (unsigned)__builtin_ctzll(bits);
-                int v = (w << 6) + (int)b; if (v >= N) break;
-                // 次の候補 = c ∧ NB[v]、かつ >v に制限
+                int v = (w << 6) + (int)b;
+                if (v >= N)
+                {
+                    break;
+                }
                 and_row(c, v, next);
                 mask_gt(v, next);
                 cur.push_back(v);
@@ -470,11 +570,15 @@ static void dump_k_cliques_bitadj(
         }
     };
 
-    // 先頭頂点 v をループ（候補 = NB[v] のみ）
-    for (int v = 0; v < N; ++v) {
-        for (int w = 0; w < W; ++w) cand[w] = NB[(size_t)v * (size_t)W + (size_t)w];
+    for (int v = 0; v < N; ++v)
+    {
+        for (int w = 0; w < W; ++w)
+        {
+            cand[w] = NB[(size_t)v * (size_t)W + (size_t)w];
+        }
         mask_gt(v, cand);
-        cur.clear(); cur.push_back(v);
+        cur.clear();
+        cur.push_back(v);
         dfs(v, 1, cand);
     }
 }
@@ -516,19 +620,40 @@ static void process_largeN_trial(
             double dot = xi * B.x[j2] + yi * B.y[j2] + zi * B.z[j2];
             if (dot >= cos_thr)
             {
-                set_edge(i2, j2); set_edge(j2, i2);
-                edges_undirected++; degv[i2]++; degv[j2]++;
+                set_edge(i2, j2);
+                set_edge(j2, i2);
+                edges_undirected++;
+                degv[i2]++;
+                degv[j2]++;
             }
         }
     }
 
     if (debug)
     {
-        double sum = 0.0; int dmin = N, dmax = 0;
-        for (int di : degv) { sum += di; if (di < dmin) dmin = di; if (di > dmax) dmax = di; }
+        double sum = 0.0;
+        int dmin = N;
+        int dmax = 0;
+        for (int di : degv)
+        {
+            sum += di;
+            if (di < dmin)
+            {
+                dmin = di;
+            }
+            if (di > dmax)
+            {
+                dmax = di;
+            }
+        }
+        double davg = 0.0;
+        if (N != 0)
+        {
+            davg = sum / N;
+        }
         std::fprintf(stderr,
                      "t=%d/%d build adjacency (edges=%lld, deg[min/avg/max]=%d/%.2f/%d)\n",
-                     t + 1, M, edges_undirected, dmin, (N ? sum / N : 0.0), dmax);
+                     t + 1, M, edges_undirected, dmin, davg, dmax);
     }
 
     if (cluster_size == 2)
@@ -575,9 +700,14 @@ static void process_largeN_trial(
 
     if (debug)
     {
+        const char *fastpath = "false";
+        if (cluster_size == 3)
+        {
+            fastpath = "true";
+        }
         std::fprintf(stderr,
                      "t=%d/%d count k-cliques (k=%d, fastpath=%s)\n",
-                     t + 1, M, cluster_size, (cluster_size == 3 ? "true" : "false"));
+                     t + 1, M, cluster_size, fastpath);
         try
         {
             char evname[64]; std::snprintf(evname, sizeof(evname), "sim_%05d_events.txt", t + 1);
@@ -602,21 +732,32 @@ static void process_largeN_trial(
                 {
                     for (int j0 = i0 + 1; j0 < N; ++j0)
                     {
-                        int wb = j0 >> 6; int bb = j0 & 63;
-                        if ((NB[(size_t)i0 * (size_t)W + (size_t)wb] & (1ULL << bb)) == 0ULL) continue;
+                        int wb = j0 >> 6;
+                        int bb = j0 & 63;
+                        if ((NB[(size_t)i0 * (size_t)W + (size_t)wb] & (1ULL << bb)) == 0ULL)
+                        {
+                            continue;
+                        }
                         for (int w = wb; w < W; ++w)
                         {
                             uint64_t c = NB[(size_t)i0 * (size_t)W + (size_t)w] & NB[(size_t)j0 * (size_t)W + (size_t)w];
                             if (w == wb)
                             {
-                                uint64_t mask = (bb < 63) ? ~((1ULL << (bb + 1)) - 1ULL) : 0ULL;
+                                uint64_t mask = 0ULL;
+                                if (bb < 63)
+                                {
+                                    mask = ~((1ULL << (bb + 1)) - 1ULL);
+                                }
                                 c &= mask;
                             }
                             while (c)
                             {
                                 unsigned b = (unsigned)__builtin_ctzll(c);
                                 int k = (w << 6) + (int)b;
-                                if (k < N) { cf << i0 << '\t' << j0 << '\t' << k << '\n'; }
+                                if (k < N)
+                                {
+                                    cf << i0 << '\t' << j0 << '\t' << k << '\n';
+                                }
                                 c &= (c - 1ULL);
                             }
                         }

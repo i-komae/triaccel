@@ -1,7 +1,7 @@
 import triaccel
 
 N_TRIALS = 100_000_000
-SAVE_HIST = False
+SAVE_HIST = True
 
 sites = [{"lat": 39.3, "lon": -112.9, "zmax": 55.0, "n": 32},
          {"lat": -35.2, "lon": -69.2, "zmax": 60.0, "n": 35}]
@@ -17,7 +17,7 @@ res = triaccel.simulate(
 )
 
 # トリプレット確率分布を保存
-triaccel.viz.write_triplet_prob_sigma(res, n=30, outdir="results", filename=f"counts_{N_TRIALS:.0e}.npy")
+triaccel.viz.write_triplet_prob_sigma(res, n=10, outdir="results", filename=f"counts_{N_TRIALS:.0e}.npy")
 
 # 図を描く
 # トリプレット数分布（log軸で保存）
