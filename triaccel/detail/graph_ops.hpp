@@ -21,7 +21,10 @@ inline void build_masks_u128(const std::vector<double> &x,
                              std::vector<uint64_t> &m1)
 {
     int N = (int)x.size();
-    for (int i = 0; i < N; ++i) { m0[i] = m1[i] = 0ULL; }
+    for (int i = 0; i < N; ++i)
+    {
+        m0[i] = m1[i] = 0ULL;
+    }
     for (int i = 0; i < N - 1; ++i)
     {
         double xi = x[i], yi = y[i], zi = z[i];
@@ -77,8 +80,10 @@ inline void push_hist_from_vertices_u128(const int *verts,
     vx /= r;
     vy /= r;
     vz /= r;
-    double ra_deg, dec_deg; compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
-    int ir, id; bin2d(ra_deg, dec_deg, ir, id);
+    double ra_deg, dec_deg;
+    compute_ra_dec_deg_from_xyz(vx, vy, vz, ra_deg, dec_deg);
+    int ir, id;
+    bin2d(ra_deg, dec_deg, ir, id);
     H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
 }
 
@@ -105,7 +110,8 @@ inline long long count_pairs_hist_u128(
         }
         while (a0)
         {
-            int j = ctz64(a0); a0 &= (a0 - 1);
+            int j = ctz64(a0);
+            a0 &= (a0 - 1);
             if (mark_members)
             {
                 in_cluster[i] = 1;
@@ -187,7 +193,8 @@ inline long long count_k_cliques_hist_u128(
 {
     const int K = cluster_size;
     long long kcnt = 0;
-    std::vector<int> R; R.reserve(K);
+    std::vector<int> R;
+    R.reserve(K);
     auto mask_gt = [&](uint64_t &a0, uint64_t &a1, int thr)
     {
         if (thr < 63)
@@ -227,7 +234,8 @@ inline long long count_k_cliques_hist_u128(
             uint64_t tmp0 = P0;
             while (tmp0)
             {
-                int b = ctz64(tmp0); tmp0 &= (tmp0 - 1);
+                int b = ctz64(tmp0);
+                tmp0 &= (tmp0 - 1);
                 R.push_back(b);
                 push_hist_from_vertices_u128(R.data(), K, x, y, z,
                                              bins_ra, bin2d, Tri2d_loc, tid);
@@ -240,9 +248,11 @@ inline long long count_k_cliques_hist_u128(
             uint64_t tmp1 = P1;
             while (tmp1)
             {
-                int b = ctz64(tmp1); tmp1 &= (tmp1 - 1);
+                int b = ctz64(tmp1);
+                tmp1 &= (tmp1 - 1);
                 int idx = 64 + b;
-                if (idx >= N) continue;
+                if (idx >= N)
+                    continue;
                 R.push_back(idx);
                 push_hist_from_vertices_u128(R.data(), K, x, y, z,
                                              bins_ra, bin2d, Tri2d_loc, tid);
@@ -283,14 +293,20 @@ inline long long count_k_cliques_hist_u128(
                 }
             }
             R.push_back(v);
-            uint64_t NP0 = m0[v] & P0; uint64_t NP1 = m1[v] & P1; mask_gt(NP0, NP1, v);
-            dfs(NP0, NP1); R.pop_back();
+            uint64_t NP0 = m0[v] & P0;
+            uint64_t NP1 = m1[v] & P1;
+            mask_gt(NP0, NP1, v);
+            dfs(NP0, NP1);
+            R.pop_back();
         }
     };
     for (int v0 = 0; v0 < N; ++v0)
     {
-        uint64_t P0 = m0[v0], P1 = m1[v0]; mask_gt(P0, P1, v0);
-        R.push_back(v0); dfs(P0, P1); R.pop_back();
+        uint64_t P0 = m0[v0], P1 = m1[v0];
+        mask_gt(P0, P1, v0);
+        R.push_back(v0);
+        dfs(P0, P1);
+        R.pop_back();
     }
     return kcnt;
 }
@@ -311,7 +327,8 @@ inline long long count_k_cliques_hist_u128_nodebug(
 {
     const int K = cluster_size;
     long long kcnt = 0;
-    std::vector<int> R; R.reserve(K);
+    std::vector<int> R;
+    R.reserve(K);
     auto mask_gt = [&](uint64_t &a0, uint64_t &a1, int thr)
     {
         if (thr < 63)
@@ -349,7 +366,8 @@ inline long long count_k_cliques_hist_u128_nodebug(
             uint64_t tmp0 = P0;
             while (tmp0)
             {
-                int b = ctz64(tmp0); tmp0 &= (tmp0 - 1);
+                int b = ctz64(tmp0);
+                tmp0 &= (tmp0 - 1);
                 R.push_back(b);
                 push_hist_from_vertices_u128(R.data(), K, x, y, z,
                                              bins_ra, bin2d, Tri2d_loc, tid);
@@ -358,9 +376,11 @@ inline long long count_k_cliques_hist_u128_nodebug(
             uint64_t tmp1 = P1;
             while (tmp1)
             {
-                int b = ctz64(tmp1); tmp1 &= (tmp1 - 1);
+                int b = ctz64(tmp1);
+                tmp1 &= (tmp1 - 1);
                 int idx = 64 + b;
-                if (idx >= N) continue;
+                if (idx >= N)
+                    continue;
                 R.push_back(idx);
                 push_hist_from_vertices_u128(R.data(), K, x, y, z,
                                              bins_ra, bin2d, Tri2d_loc, tid);
@@ -390,14 +410,17 @@ inline long long count_k_cliques_hist_u128_nodebug(
                 }
             }
             R.push_back(v);
-            uint64_t NP0 = m0[v] & P0; uint64_t NP1 = m1[v] & P1; mask_gt(NP0, NP1, v);
+            uint64_t NP0 = m0[v] & P0;
+            uint64_t NP1 = m1[v] & P1;
+            mask_gt(NP0, NP1, v);
             dfs(depth + 1, NP0, NP1);
             R.pop_back();
         }
     };
     for (int v0 = 0; v0 < N; ++v0)
     {
-        uint64_t P0 = m0[v0], P1 = m1[v0]; mask_gt(P0, P1, v0);
+        uint64_t P0 = m0[v0], P1 = m1[v0];
+        mask_gt(P0, P1, v0);
         R.clear();
         R.push_back(v0);
         dfs(1, P0, P1);
@@ -415,7 +438,8 @@ inline long long count_k_cliques_nohist_u128(
 {
     const int K = cluster_size;
     long long kcnt = 0;
-    std::vector<int> R; R.reserve(K);
+    std::vector<int> R;
+    R.reserve(K);
     auto mask_gt = [&](uint64_t &a0, uint64_t &a1, int thr)
     {
         if (thr < 63)
@@ -461,14 +485,17 @@ inline long long count_k_cliques_nohist_u128(
                 uint64_t tmp0 = P0, tmp1 = P1;
                 while (tmp0)
                 {
-                    int b = ctz64(tmp0); tmp0 &= (tmp0 - 1);
+                    int b = ctz64(tmp0);
+                    tmp0 &= (tmp0 - 1);
                     (*in_cluster)[b] = 1;
                 }
                 while (tmp1)
                 {
-                    int b = ctz64(tmp1); tmp1 &= (tmp1 - 1);
+                    int b = ctz64(tmp1);
+                    tmp1 &= (tmp1 - 1);
                     int idx = 64 + b;
-                    if (idx < N) (*in_cluster)[idx] = 1;
+                    if (idx < N)
+                        (*in_cluster)[idx] = 1;
                 }
             }
             return;
@@ -495,14 +522,20 @@ inline long long count_k_cliques_nohist_u128(
                 }
             }
             R.push_back(v);
-            uint64_t NP0 = m0[v] & P0; uint64_t NP1 = m1[v] & P1; mask_gt(NP0, NP1, v);
-            dfs(NP0, NP1); R.pop_back();
+            uint64_t NP0 = m0[v] & P0;
+            uint64_t NP1 = m1[v] & P1;
+            mask_gt(NP0, NP1, v);
+            dfs(NP0, NP1);
+            R.pop_back();
         }
     };
     for (int v0 = 0; v0 < N; ++v0)
     {
-        uint64_t P0 = m0[v0], P1 = m1[v0]; mask_gt(P0, P1, v0);
-        R.push_back(v0); dfs(P0, P1); R.pop_back();
+        uint64_t P0 = m0[v0], P1 = m1[v0];
+        mask_gt(P0, P1, v0);
+        R.push_back(v0);
+        dfs(P0, P1);
+        R.pop_back();
     }
     return kcnt;
 }
@@ -573,13 +606,16 @@ inline long long count_k_cliques_nohist_u128_nodebug(
                     continue;
                 }
             }
-            uint64_t NP0 = m0[v] & P0; uint64_t NP1 = m1[v] & P1; mask_gt(NP0, NP1, v);
+            uint64_t NP0 = m0[v] & P0;
+            uint64_t NP1 = m1[v] & P1;
+            mask_gt(NP0, NP1, v);
             dfs(depth + 1, NP0, NP1);
         }
     };
     for (int v0 = 0; v0 < N; ++v0)
     {
-        uint64_t P0 = m0[v0], P1 = m1[v0]; mask_gt(P0, P1, v0);
+        uint64_t P0 = m0[v0], P1 = m1[v0];
+        mask_gt(P0, P1, v0);
         dfs(1, P0, P1);
     }
     return kcnt;

@@ -1,9 +1,9 @@
+import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import os
 os.environ.setdefault("MPLBACKEND", "Agg")
-import matplotlib
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 
 plt.rcParams['text.usetex'] = True
@@ -25,6 +25,7 @@ def _ensure_outdir(outdir: str | None) -> str:
         outdir = os.path.join(os.getcwd(), "triaccel_plots")
     os.makedirs(outdir, exist_ok=True)
     return outdir
+
 
 def _save_fig(fig, *, outdir: str | None, filename: str):
     outdir = _ensure_outdir(outdir)
@@ -113,9 +114,11 @@ def hammer(res, what="events", *, ax=None, title=None, outdir=None, filename=Non
     dec_edges_deg = np.asarray(res["dec_edges"])
 
     if H.shape[1] + 1 != ra_edges_deg.size:
-        raise ValueError(f"shape mismatch: H.shape[1]+1={H.shape[1]+1} vs ra_edges.size={ra_edges_deg.size}")
+        raise ValueError(
+            f"shape mismatch: H.shape[1]+1={H.shape[1]+1} vs ra_edges.size={ra_edges_deg.size}")
     if H.shape[0] + 1 != dec_edges_deg.size:
-        raise ValueError(f"shape mismatch: H.shape[0]+1={H.shape[0]+1} vs dec_edges.size={dec_edges_deg.size}")
+        raise ValueError(
+            f"shape mismatch: H.shape[0]+1={H.shape[0]+1} vs dec_edges.size={dec_edges_deg.size}")
 
     lon_edges_deg = -ra_edges_deg
     d = np.diff(lon_edges_deg)
@@ -125,7 +128,8 @@ def hammer(res, what="events", *, ax=None, title=None, outdir=None, filename=Non
         lon_edges_deg = lon_edges_deg[::-1]
         H = H[:, ::-1]
     else:
-        raise ValueError("RA edge array is not monotonic; cannot map H to cells safely.")
+        raise ValueError(
+            "RA edge array is not monotonic; cannot map H to cells safely.")
 
     lat_edges = np.deg2rad(dec_edges_deg)
     lon_edges = np.deg2rad(lon_edges_deg)
@@ -225,7 +229,8 @@ def write_triplet_prob_sigma(
         print(f"Failed to save counts to {counts_path}: {e}")
 
     lines = []
-    header = "\nProbability P(triplets >= n) and one-sided Gaussian sigma (n=%d..%d):" % (n_min, n_max)
+    header = "\nProbability P(triplets >= n) and one-sided Gaussian sigma (n=%d..%d):" % (
+        n_min, n_max)
     lines.append(header)
 
     counts_int = counts.astype(np.int64, copy=False)
@@ -245,7 +250,8 @@ def write_triplet_prob_sigma(
         elif p >= 1.0:
             z = 0.0                                    # 常に達成 → 0σ
         else:
-            z = float(_norm_ppf(1.0 - p))              # 片側: Z such that P(Z>=z)=p
+            # 片側: Z such that P(Z>=z)=p
+            z = float(_norm_ppf(1.0 - p))
         lines.append(f"n={n:2d}  p={p:<12.6g}  sigma={z:<10.6f}")
     lines.append("")
 

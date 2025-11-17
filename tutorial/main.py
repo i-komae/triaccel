@@ -17,7 +17,8 @@ res = triaccel.simulate(
 )
 
 # トリプレット確率分布を保存
-triaccel.viz.write_triplet_prob_sigma(res, n=10, outdir="results", filename=f"counts_{N_TRIALS:.0e}.npy")
+triaccel.viz.write_triplet_prob_sigma(
+    res, n=10, outdir="results", filename=f"counts_{N_TRIALS:.0e}.npy")
 
 # 図を描く
 # トリプレット数分布（log軸で保存）

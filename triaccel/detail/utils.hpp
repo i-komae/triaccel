@@ -26,8 +26,10 @@ static inline double deg(double r) { return r * 180.0 / PI; }
 // [-1,1] にクランプ
 static inline double clamp_unit(double v)
 {
-    if (v < -1.0) return -1.0;
-    if (v > 1.0) return 1.0;
+    if (v < -1.0)
+        return -1.0;
+    if (v > 1.0)
+        return 1.0;
     return v;
 }
 
@@ -36,7 +38,8 @@ static inline void compute_ra_dec_deg_from_xyz(double x, double y, double z,
                                                double &ra_deg, double &dec_deg)
 {
     double ra = std::atan2(y, x);
-    if (ra < 0.0) ra += 2 * PI;
+    if (ra < 0.0)
+        ra += 2 * PI;
     double dec = std::asin(clamp_unit(z));
     ra_deg = deg(ra);
     dec_deg = deg(dec);
@@ -46,7 +49,8 @@ static inline void compute_ra_dec_deg_from_xyz(double x, double y, double z,
 static inline double wrap_deg180(double ra_deg)
 {
     double t = std::fmod(ra_deg + 180.0, 360.0);
-    if (t < 0.0) t += 360.0;
+    if (t < 0.0)
+        t += 360.0;
     return t - 180.0;
 }
 
@@ -106,7 +110,8 @@ static inline int get_terminal_width()
 // 経過秒を HH:MM:SS 形式に整形
 static inline std::string fmt_hms(double seconds)
 {
-    if (seconds < 0) seconds = 0;
+    if (seconds < 0)
+        seconds = 0;
     long long s = (long long)(seconds + 0.5);
     int h = (int)(s / 3600);
     int m = (int)((s % 3600) / 60);
@@ -119,7 +124,8 @@ static inline std::string fmt_hms(double seconds)
 // 簡易ディレクトリ作成（'/' 区切り前提）
 static inline void ensure_dirs(const std::string &path)
 {
-    if (path.empty()) return;
+    if (path.empty())
+        return;
     std::string tmp;
     tmp.reserve(path.size());
     for (size_t i = 0; i < path.size(); ++i)
@@ -128,7 +134,8 @@ static inline void ensure_dirs(const std::string &path)
         tmp.push_back(c);
         if (c == '/' || i + 1 == path.size())
         {
-            if (tmp.size() == 1 && tmp[0] == '/') continue;
+            if (tmp.size() == 1 && tmp[0] == '/')
+                continue;
 #if defined(_WIN32)
             int rc = _mkdir(tmp.c_str());
 #else
@@ -166,19 +173,23 @@ static inline void update_progress_bar(
     std::mutex &print_mtx,
     int step)
 {
-    if (!use_progress) return;
+    if (!use_progress)
+        return;
     auto now_steady = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lk(print_mtx);
     auto since = std::chrono::duration_cast<std::chrono::seconds>(now_steady - last_progress_time).count();
-    if ((c % step) != 0 && c != M && since < 1) return;
+    if ((c % step) != 0 && c != M && since < 1)
+        return;
     last_progress_time = now_steady;
 
     double pct = (100.0 * c) / (double)M;
     double elapsed_s = std::chrono::duration_cast<std::chrono::seconds>(now_steady - start_steady).count();
     double rem_s = (c > 0) ? (elapsed_s * ((double)M / (double)c - 1.0)) : 0.0;
-    if (rem_s < 0) rem_s = 0.0;
+    if (rem_s < 0)
+        rem_s = 0.0;
 
-    std::string meta = [&]{
+    std::string meta = [&]
+    {
         std::string elapsed_str = fmt_hms(elapsed_s);
         std::string eta_str = fmt_hms(rem_s);
         char meta_buf[128];
@@ -189,16 +200,22 @@ static inline void update_progress_bar(
 
     int cols = get_terminal_width();
     int width = cols - 4 - (int)meta.size();
-    if (width < 10) width = 10;
-    if (width > 200) width = 200;
+    if (width < 10)
+        width = 10;
+    if (width > 200)
+        width = 200;
 
     int filled = (int)((pct / 100.0) * width);
-    if (filled < 0) filled = 0;
-    if (filled > width) filled = width;
+    if (filled < 0)
+        filled = 0;
+    if (filled > width)
+        filled = width;
 
     std::fprintf(stderr, "\r[");
-    for (int ii = 0; ii < filled; ++ii) std::fputc('#', stderr);
-    for (int ii = filled; ii < width; ++ii) std::fputc('.', stderr);
+    for (int ii = 0; ii < filled; ++ii)
+        std::fputc('#', stderr);
+    for (int ii = filled; ii < width; ++ii)
+        std::fputc('.', stderr);
     std::fprintf(stderr, "] %s ", meta.c_str());
     std::fflush(stderr);
 }
@@ -212,7 +229,8 @@ static inline void prepare_debug_dirs(bool debug,
     log_dir_path.clear();
     log_text_dir.clear();
     log_fig_dir.clear();
-    if (!debug) return;
+    if (!debug)
+        return;
     try
     {
         auto ts = iso8601_utc_now();
@@ -222,7 +240,9 @@ static inline void prepare_debug_dirs(bool debug,
         ensure_dirs(log_text_dir);
         ensure_dirs(log_fig_dir);
     }
-    catch (...) { }
+    catch (...)
+    {
+    }
 }
 
 // ============================= ヒストグラムユーティリティ =============================
@@ -231,8 +251,10 @@ static inline void bump_hist_1d(double val_deg, double lo, double hi, int bins, 
 {
     double w = (hi - lo) / bins;
     int i = (int)std::floor((val_deg - lo) / w);
-    if (i < 0) i = 0;
-    if (i >= bins) i = bins - 1;
+    if (i < 0)
+        i = 0;
+    if (i >= bins)
+        i = bins - 1;
     H[(size_t)i] += 1;
 }
 
@@ -248,11 +270,15 @@ static inline std::function<void(double, double, int &, int &)> make_bin2d(int b
     {
         double ra_wrapped = wrap_ra_hist(ra_deg, ra_hi);
         ir = (int)std::floor((ra_wrapped - ra_lo) / wra);
-        if (ir < 0) ir = 0;
-        if (ir >= bins_ra) ir = bins_ra - 1;
+        if (ir < 0)
+            ir = 0;
+        if (ir >= bins_ra)
+            ir = bins_ra - 1;
         int id_tmp = (int)std::floor((dec_deg + 90.0) / wde);
-        if (id_tmp < 0) id_tmp = 0;
-        if (id_tmp >= bins_dec) id_tmp = bins_dec - 1;
+        if (id_tmp < 0)
+            id_tmp = 0;
+        if (id_tmp >= bins_dec)
+            id_tmp = bins_dec - 1;
         id = id_tmp;
     };
 }

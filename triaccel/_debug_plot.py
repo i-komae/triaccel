@@ -8,7 +8,8 @@ from typing import Optional
 def _latest_log_dir(base_log_dir: str) -> Optional[str]:
     if not os.path.isdir(base_log_dir):
         return None
-    names = [n for n in os.listdir(base_log_dir) if os.path.isdir(os.path.join(base_log_dir, n))]
+    names = [n for n in os.listdir(base_log_dir) if os.path.isdir(
+        os.path.join(base_log_dir, n))]
     if not names:
         return None
     names.sort(reverse=True)
@@ -97,7 +98,8 @@ def _draw_small_circle(ax, ra_deg: float, dec_deg: float, radius_deg: float, *, 
         width_px = ax.get_window_extent(renderer=renderer).width
         # Hammer x-range spans [-pi, pi] in data coords; rough angular per pixel at equator
         deg_per_px = (360.0) / float(width_px) if width_px > 0 else 0.0
-        lw_ang_deg = lw * (deg_per_px / 72.0)  # points -> inches -> pixels already accounted; treat points as 1/72 inch
+        # points -> inches -> pixels already accounted; treat points as 1/72 inch
+        lw_ang_deg = lw * (deg_per_px / 72.0)
     except Exception:
         lw_ang_deg = 0.0
     rho = math.radians(max(1e-6, radius_deg - 0.5 * lw_ang_deg))
@@ -111,7 +113,8 @@ def _draw_small_circle(ax, ra_deg: float, dec_deg: float, radius_deg: float, *, 
 
     lat = np.arcsin(sin_delta * cos_rho + cos_delta * sin_rho * cos_phi)
     # central longitude alpha + atan2(...)
-    lon = alpha + np.arctan2(sin_phi * sin_rho * cos_delta, cos_rho - sin_delta * np.sin(lat))
+    lon = alpha + np.arctan2(sin_phi * sin_rho * cos_delta,
+                             cos_rho - sin_delta * np.sin(lat))
     # wrap lon to [-pi, pi) and apply RA inversion (lambda = -lon)
     lon_wrapped = np.vectorize(_wrap_pi)(lon)
     lam = -lon_wrapped
@@ -157,7 +160,8 @@ def render_all(log_dir: Optional[str] = None, base_log_dir: str = "log", circle_
     print(f"[debug-plot] using log_dir: {log_dir}")
 
     # Collect event files
-    files = [f for f in os.listdir(text_dir) if f.startswith("sim_") and f.endswith("_events.txt")]
+    files = [f for f in os.listdir(text_dir) if f.startswith(
+        "sim_") and f.endswith("_events.txt")]
     files.sort()
 
     for fn in files:
@@ -182,7 +186,8 @@ def render_all(log_dir: Optional[str] = None, base_log_dir: str = "log", circle_
         members = _read_clique_members(clique_file) if clique_file else set()
         inc_from_events = set(i for i, v in enumerate(inc) if v)
         if members and inc_from_events != members:
-            print(f"[debug-plot] warn: in_cluster mismatch: events={len(inc_from_events)} vs cliques={len(members)}; using union for coloring")
+            print(
+                f"[debug-plot] warn: in_cluster mismatch: events={len(inc_from_events)} vs cliques={len(members)}; using union for coloring")
         use_members = members if members else inc_from_events
 
         fig = plt.figure(figsize=(8, 4))
@@ -194,17 +199,20 @@ def render_all(log_dir: Optional[str] = None, base_log_dir: str = "log", circle_
         n_black = 0
         for i in range(n_all):
             if i not in use_members:
-                _draw_small_circle(ax, ra_deg[i], dec_deg[i], circle_radius_deg, color="black", lw=0.5, segments=180)
+                _draw_small_circle(
+                    ax, ra_deg[i], dec_deg[i], circle_radius_deg, color="black", lw=0.5, segments=180)
                 n_black += 1
         n_red = 0
         for i in sorted(use_members):
             if 0 <= i < n_all:
-                _draw_small_circle(ax, ra_deg[i], dec_deg[i], circle_radius_deg, color="red", lw=0.5, segments=180)
+                _draw_small_circle(
+                    ax, ra_deg[i], dec_deg[i], circle_radius_deg, color="red", lw=0.5, segments=180)
                 n_red += 1
 
         # Grid and ticks
         ax.grid(True)
-        ra_ticks_deg = np.array([-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150])
+        ra_ticks_deg = np.array(
+            [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150])
         lam_ticks = np.deg2rad(-ra_ticks_deg)
         ax.set_xticks(lam_ticks)
         ax.set_xticklabels([str(int(x)) for x in ra_ticks_deg])
@@ -216,7 +224,8 @@ def render_all(log_dir: Optional[str] = None, base_log_dir: str = "log", circle_
 
         fig.tight_layout()
         fig.savefig(out_path, format=fmt, bbox_inches="tight")
-        print(f"[debug-plot] wrote {out_path} (radius={circle_radius_deg} deg, total={n_all}, red={n_red}, black={n_black})")
+        print(
+            f"[debug-plot] wrote {out_path} (radius={circle_radius_deg} deg, total={n_all}, red={n_red}, black={n_black})")
         plt.close(fig)
 
     return None

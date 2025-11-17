@@ -30,8 +30,6 @@
 
 namespace py = pybind11;
 
-
-
 // 事前計算済みの RA/Dec 配列を使ってイベント・ヒストグラムを更新（再計算を回避）
 static void update_event_histograms(
     int N,
@@ -149,11 +147,11 @@ static void gen_site_eci(const SiteC &S, int offset, RNG &rng,
 // --- ワーカー用バッファ（各試行で使い回すメモリ領域） ---
 struct ThreadBuf
 {
-    std::vector<double>   x, y, z;
+    std::vector<double> x, y, z;
     std::vector<uint64_t> m0, m1;
-    std::vector<int>      site_id;
-    std::vector<char>     in_cluster;
-    std::vector<double>   ra_deg_arr, dec_deg_arr;
+    std::vector<int> site_id;
+    std::vector<char> in_cluster;
+    std::vector<double> ra_deg_arr, dec_deg_arr;
     ThreadBuf(int N)
         : x(N), y(N), z(N), m0(N), m1(N), site_id(N, 0), in_cluster(N, 0),
           ra_deg_arr(N), dec_deg_arr(N) {}
@@ -200,11 +198,13 @@ static void dump_k_cliques_u128(
         return;
     }
 
-    auto and_with_nb = [&](uint64_t c0, uint64_t c1, int v, uint64_t &o0, uint64_t &o1) {
+    auto and_with_nb = [&](uint64_t c0, uint64_t c1, int v, uint64_t &o0, uint64_t &o1)
+    {
         o0 = c0 & m0[v];
         o1 = c1 & m1[v];
     };
-    auto mask_gt = [&](int v, uint64_t &c0, uint64_t &c1) {
+    auto mask_gt = [&](int v, uint64_t &c0, uint64_t &c1)
+    {
         if (v < 63)
         {
             uint64_t mask0 = ~((1ULL << (v + 1)) - 1ULL);
@@ -329,8 +329,10 @@ static void process_smallN_trial(
         {
             int di = pop64(B.m0[i]) + pop64(B.m1[i]);
             dsum += di;
-            if (di < dmin) dmin = di;
-            if (di > dmax) dmax = di;
+            if (di < dmin)
+                dmin = di;
+            if (di > dmax)
+                dmax = di;
         }
         edges = (long long)(dsum / 2.0);
         double davg = 0.0;
@@ -338,9 +340,9 @@ static void process_smallN_trial(
         {
             davg = dsum / N;
         }
-            std::fprintf(stderr,
-                         "t=%d/%d build adjacency (edges=%lld, deg[min/avg/max]=%d/%.2f/%d)\n",
-                         t + 1, M, edges, dmin, davg, dmax);
+        std::fprintf(stderr,
+                     "t=%d/%d build adjacency (edges=%lld, deg[min/avg/max]=%d/%.2f/%d)\n",
+                     t + 1, M, edges, dmin, davg, dmax);
     }
 
     long long kcnt = 0;
@@ -384,8 +386,8 @@ static void process_smallN_trial(
         if (cluster_size == 2)
         {
             kcnt = count_pairs_u128(B.m0, B.m1, N,
-                                   Debug ? &B.in_cluster : nullptr,
-                                   Debug);
+                                    Debug ? &B.in_cluster : nullptr,
+                                    Debug);
         }
         else
         {
@@ -434,9 +436,12 @@ static void process_smallN_trial(
             cf << "# v0\tv1\tv2...\n";
             if (cluster_size == 3)
             {
-                auto has_edge = [&](int a, int b) -> bool {
-                    if (b < 64) return (B.m0[a] >> b) & 1ULL;
-                    else        return (B.m1[a] >> (b - 64)) & 1ULL;
+                auto has_edge = [&](int a, int b) -> bool
+                {
+                    if (b < 64)
+                        return (B.m0[a] >> b) & 1ULL;
+                    else
+                        return (B.m1[a] >> (b - 64)) & 1ULL;
                 };
                 for (int i0 = 0; i0 < N; ++i0)
                 {
@@ -493,16 +498,22 @@ static void process_smallN_trial(
             }
             else if (cluster_size == 2)
             {
-                auto has_edge = [&](int a, int b) -> bool {
-                    if (b < 64) return (B.m0[a] >> b) & 1ULL;
-                    else        return (B.m1[a] >> (b - 64)) & 1ULL;
+                auto has_edge = [&](int a, int b) -> bool
+                {
+                    if (b < 64)
+                        return (B.m0[a] >> b) & 1ULL;
+                    else
+                        return (B.m1[a] >> (b - 64)) & 1ULL;
                 };
                 // list all edges (i<j)
                 for (int i0 = 0; i0 < N; ++i0)
                 {
                     for (int j0 = i0 + 1; j0 < N; ++j0)
                     {
-                        if (has_edge(i0, j0)) { cf << i0 << '\t' << j0 << '\n'; }
+                        if (has_edge(i0, j0))
+                        {
+                            cf << i0 << '\t' << j0 << '\n';
+                        }
                     }
                 }
             }
@@ -514,7 +525,9 @@ static void process_smallN_trial(
             }
             cf.close();
         }
-        catch (...) { }
+        catch (...)
+        {
+        }
     }
 }
 
@@ -654,7 +667,8 @@ static void process_largeN_trial(
     std::vector<uint64_t> NB((size_t)N * (size_t)W, 0ULL);
     auto set_edge = [&](int a, int b)
     {
-        int wb = b >> 6; int bb = b & 63;
+        int wb = b >> 6;
+        int bb = b & 63;
         NB[(size_t)a * (size_t)W + (size_t)wb] |= (1ULL << bb);
     };
     // ビット隣接 NB の set/test はローカルラムダで十分に明瞭
@@ -759,7 +773,8 @@ static void process_largeN_trial(
                      t + 1, M, cluster_size, fastpath);
         try
         {
-            char evname[64]; std::snprintf(evname, sizeof(evname), "sim_%05d_events.txt", t + 1);
+            char evname[64];
+            std::snprintf(evname, sizeof(evname), "sim_%05d_events.txt", t + 1);
             std::string evpath = log_text_dir + "/" + std::string(evname);
             std::ofstream evf(evpath.c_str());
             evf << "# idx\tsite\tra_deg\tdec_deg\tin_cluster\n";
@@ -771,7 +786,8 @@ static void process_largeN_trial(
             }
             evf.close();
             // also dump cliques in debug mode
-            char clqname[64]; std::snprintf(clqname, sizeof(clqname), "sim_%05d_cliques_k%d.txt", t + 1, cluster_size);
+            char clqname[64];
+            std::snprintf(clqname, sizeof(clqname), "sim_%05d_cliques_k%d.txt", t + 1, cluster_size);
             std::string clqpath = log_text_dir + "/" + std::string(clqname);
             std::ofstream cf(clqpath.c_str());
             if (cluster_size == 3)
@@ -820,7 +836,8 @@ static void process_largeN_trial(
                 {
                     for (int j0 = i0 + 1; j0 < N; ++j0)
                     {
-                        int wb = j0 >> 6; int bb = j0 & 63;
+                        int wb = j0 >> 6;
+                        int bb = j0 & 63;
                         if (NB[(size_t)i0 * (size_t)W + (size_t)wb] & (1ULL << bb))
                             cf << i0 << '\t' << j0 << '\n';
                     }
@@ -834,7 +851,9 @@ static void process_largeN_trial(
             }
             cf.close();
         }
-        catch (...) { }
+        catch (...)
+        {
+        }
     }
 }
 
@@ -892,7 +911,6 @@ static void parse_bins_option_or_default(py::object bins, int &bins_ra, int &bin
     throw std::runtime_error("bins must be int or sequence of length 2");
 }
 
-
 static int decide_threads_param(py::object threads, bool debug, int M)
 {
     int T = 1;
@@ -925,7 +943,6 @@ static int decide_threads_param(py::object threads, bool debug, int M)
     }
     return T;
 }
-
 
 static void run_simulation_and_aggregate(
     int M,
@@ -1005,14 +1022,14 @@ static void run_simulation_and_aggregate(
                 if (N <= 128)
                 {
                     process_smallN_trial<Debug, Hist>(t, M, N, tid, cluster_size, cos_thr,
-                                                       bins_ra, bin2d, log_text_dir,
-                                                       B, Evt2d_loc, Tri2d_loc, counts_vec);
+                                                      bins_ra, bin2d, log_text_dir,
+                                                      B, Evt2d_loc, Tri2d_loc, counts_vec);
                 }
                 else
                 {
                     process_largeN_trial<Debug, Hist>(t, M, N, tid, cluster_size, cos_thr,
-                                                       bins_ra, bin2d, log_text_dir,
-                                                       B, Evt2d_loc, Tri2d_loc, counts_vec);
+                                                      bins_ra, bin2d, log_text_dir,
+                                                      B, Evt2d_loc, Tri2d_loc, counts_vec);
                 }
 
                 int c = done.fetch_add(1) + 1;
@@ -1021,7 +1038,7 @@ static void run_simulation_and_aggregate(
         };
     };
 
-    std::function<void(int,int,int)> worker_entry;
+    std::function<void(int, int, int)> worker_entry;
     if (debug)
     {
         if (return_histograms)
@@ -1089,8 +1106,10 @@ static void run_simulation_and_aggregate(
         size_t SZ = (size_t)bins_ra * (size_t)bins_dec;
         for (size_t tid = 0; tid < Evt2d_loc.size(); ++tid)
         {
-            for (size_t i = 0; i < SZ; ++i) H_evt2d[i] += Evt2d_loc[tid][i];
-            for (size_t i = 0; i < SZ; ++i) H_tri2d[i] += Tri2d_loc[tid][i];
+            for (size_t i = 0; i < SZ; ++i)
+                H_evt2d[i] += Evt2d_loc[tid][i];
+            for (size_t i = 0; i < SZ; ++i)
+                H_tri2d[i] += Tri2d_loc[tid][i];
         }
     }
 
