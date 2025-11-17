@@ -220,9 +220,38 @@ inline long long count_k_cliques_hist_u128(
         {
             return;
         }
-        if (rsz == K)
+        if (rsz == K - 1)
         {
-            kcnt += 1;
+            kcnt += psize;
+            // 残り1頂点を候補から選び、それぞれでヒスト更新
+            uint64_t tmp0 = P0;
+            while (tmp0)
+            {
+                int b = ctz64(tmp0); tmp0 &= (tmp0 - 1);
+                R.push_back(b);
+                push_hist_from_vertices_u128(R.data(), K, x, y, z,
+                                             bins_ra, bin2d, Tri2d_loc, tid);
+                if (debug && in_cluster)
+                {
+                    (*in_cluster)[b] = 1;
+                }
+                R.pop_back();
+            }
+            uint64_t tmp1 = P1;
+            while (tmp1)
+            {
+                int b = ctz64(tmp1); tmp1 &= (tmp1 - 1);
+                int idx = 64 + b;
+                if (idx >= N) continue;
+                R.push_back(idx);
+                push_hist_from_vertices_u128(R.data(), K, x, y, z,
+                                             bins_ra, bin2d, Tri2d_loc, tid);
+                if (debug && in_cluster)
+                {
+                    (*in_cluster)[idx] = 1;
+                }
+                R.pop_back();
+            }
             if (debug && in_cluster)
             {
                 for (int v : R)
@@ -230,9 +259,6 @@ inline long long count_k_cliques_hist_u128(
                     (*in_cluster)[v] = 1;
                 }
             }
-            push_hist_from_vertices_u128(
-                R.data(), K, x, y, z,
-                bins_ra, bin2d, Tri2d_loc, tid);
             return;
         }
         uint64_t Q0 = P0;
@@ -317,12 +343,29 @@ inline long long count_k_cliques_hist_u128_nodebug(
         {
             return;
         }
-        if (depth == K)
+        if (depth == K - 1)
         {
-            kcnt += 1;
-            push_hist_from_vertices_u128(
-                R.data(), K, x, y, z,
-                bins_ra, bin2d, Tri2d_loc, tid);
+            kcnt += psize;
+            uint64_t tmp0 = P0;
+            while (tmp0)
+            {
+                int b = ctz64(tmp0); tmp0 &= (tmp0 - 1);
+                R.push_back(b);
+                push_hist_from_vertices_u128(R.data(), K, x, y, z,
+                                             bins_ra, bin2d, Tri2d_loc, tid);
+                R.pop_back();
+            }
+            uint64_t tmp1 = P1;
+            while (tmp1)
+            {
+                int b = ctz64(tmp1); tmp1 &= (tmp1 - 1);
+                int idx = 64 + b;
+                if (idx >= N) continue;
+                R.push_back(idx);
+                push_hist_from_vertices_u128(R.data(), K, x, y, z,
+                                             bins_ra, bin2d, Tri2d_loc, tid);
+                R.pop_back();
+            }
             return;
         }
         uint64_t Q0 = P0;
@@ -405,14 +448,27 @@ inline long long count_k_cliques_nohist_u128(
         {
             return;
         }
-        if (rsz == K)
+        if (rsz == K - 1)
         {
-            kcnt += 1;
+            kcnt += psize;
             if (debug && in_cluster)
             {
                 for (int v : R)
                 {
                     (*in_cluster)[v] = 1;
+                }
+                // 加算した psize 分の頂点インデックスもマークする
+                uint64_t tmp0 = P0, tmp1 = P1;
+                while (tmp0)
+                {
+                    int b = ctz64(tmp0); tmp0 &= (tmp0 - 1);
+                    (*in_cluster)[b] = 1;
+                }
+                while (tmp1)
+                {
+                    int b = ctz64(tmp1); tmp1 &= (tmp1 - 1);
+                    int idx = 64 + b;
+                    if (idx < N) (*in_cluster)[idx] = 1;
                 }
             }
             return;
@@ -491,9 +547,9 @@ inline long long count_k_cliques_nohist_u128_nodebug(
         {
             return;
         }
-        if (depth == K)
+        if (depth == K - 1)
         {
-            kcnt += 1;
+            kcnt += psize;
             return;
         }
         uint64_t Q0 = P0;
