@@ -22,6 +22,7 @@
 #include <string>
 #include <fstream>
 #include <functional>
+#include <type_traits>
 
 #include "detail/utils.hpp"
 // グラフ処理（隣接構築・クリークカウント）
@@ -300,6 +301,7 @@ static void dump_k_cliques_u128(
 }
 
 // N<=128 の高速パス（ビットマスク 2 語）で 1 試行を処理
+template <bool Debug, bool Hist>
 static void process_smallN_trial(
     int t,
     int M,
@@ -308,8 +310,6 @@ static void process_smallN_trial(
     int cluster_size,
     double cos_thr,
     int bins_ra,
-    bool debug,
-    bool return_histograms,
     const std::function<void(double, double, int &, int &)> &bin2d,
     const std::string &log_text_dir,
     ThreadBuf &B,
@@ -319,7 +319,7 @@ static void process_smallN_trial(
 {
     build_masks_u128(B.x, B.y, B.z, cos_thr, B.m0, B.m1);
 
-    if (debug)
+    if constexpr (Debug)
     {
         long long edges = 0;
         int dmin = N;
@@ -338,22 +338,49 @@ static void process_smallN_trial(
         {
             davg = dsum / N;
         }
-        std::fprintf(stderr,
-                     "t=%d/%d build adjacency (edges=%lld, deg[min/avg/max]=%d/%.2f/%d)\n",
-                     t + 1, M, edges, dmin, davg, dmax);
+            std::fprintf(stderr,
+                         "t=%d/%d build adjacency (edges=%lld, deg[min/avg/max]=%d/%.2f/%d)\n",
+                         t + 1, M, edges, dmin, davg, dmax);
     }
 
-    long long kcnt = count_k_cliques_u128(
-        cluster_size, B.m0, B.m1, N, &B.in_cluster, debug,
-        tid, &B.x, &B.y, &B.z,
-        return_histograms,
-        bins_ra,
-        &bin2d,
-        &Tri2d_loc);
+    long long kcnt = 0;
+    if constexpr (Hist)
+    {
+        if constexpr (Debug)
+        {
+            kcnt = count_k_cliques_hist_u128(
+                cluster_size, B.m0, B.m1, N, &B.in_cluster, true,
+                tid, B.x, B.y, B.z,
+                bins_ra,
+                bin2d,
+                Tri2d_loc);
+        }
+        else
+        {
+            kcnt = count_k_cliques_hist_u128_nodebug(
+                cluster_size, B.m0, B.m1, N,
+                tid, B.x, B.y, B.z,
+                bins_ra,
+                bin2d,
+                Tri2d_loc);
+        }
+    }
+    else
+    {
+        if constexpr (Debug)
+        {
+            kcnt = count_k_cliques_nohist_u128(
+                cluster_size, B.m0, B.m1, N, &B.in_cluster, true);
+        }
+        else
+        {
+            kcnt = count_k_cliques_nohist_u128_nodebug(
+                cluster_size, B.m0, B.m1, N);
+        }
+    }
     counts_vec[t] = (int32_t)kcnt;
 
-
-    if (debug)
+    if constexpr (Debug)
     {
         const char *fastpath = "false";
         if (cluster_size == 3)
@@ -584,6 +611,7 @@ static void dump_k_cliques_bitadj(
 }
 
 // N>128 の一般パス（任意幅の語配列）で 1 試行を処理
+template <bool Debug, bool Hist>
 static void process_largeN_trial(
     int t,
     int M,
@@ -592,8 +620,6 @@ static void process_largeN_trial(
     int cluster_size,
     double cos_thr,
     int bins_ra,
-    bool debug,
-    bool return_histograms,
     const std::function<void(double, double, int &, int &)> &bin2d,
     const std::string &log_text_dir,
     ThreadBuf &B,
@@ -629,7 +655,7 @@ static void process_largeN_trial(
         }
     }
 
-    if (debug)
+    if constexpr (Debug)
     {
         double sum = 0.0;
         int dmin = N;
@@ -659,12 +685,12 @@ static void process_largeN_trial(
     if (cluster_size == 2)
     {
         long long pair_cnt;
-        if (return_histograms)
+        if constexpr (Hist)
         {
             pair_cnt = count_pairs_hist_bitadj(
                 NB, N, W, tid,
                 B.x, B.y, B.z,
-                /*mark_members=*/debug,
+                /*mark_members=*/Debug,
                 B.in_cluster,
                 bins_ra,
                 bin2d,
@@ -672,11 +698,10 @@ static void process_largeN_trial(
         }
         else
         {
-            // We already computed the undirected edge count while building NB.
             pair_cnt = edges_undirected;
-            if (debug)
+            if constexpr (Debug)
             {
-                long long check = count_pairs_bitadj(NB, N, W, &B.in_cluster, debug);
+                long long check = count_pairs_bitadj(NB, N, W, &B.in_cluster, true);
                 if (check != pair_cnt)
                 {
                     std::fprintf(stderr, "[warn] pair_cnt mismatch: edges_undirected=%lld, recount=%lld\n",
@@ -689,16 +714,17 @@ static void process_largeN_trial(
     else
     {
         long long kcnt = count_k_cliques_bitadj(
-            cluster_size, NB, N, W, &B.in_cluster, debug,
+            cluster_size, NB, N, W,
+            Debug ? &B.in_cluster : nullptr, Debug,
             tid, &B.x, &B.y, &B.z,
-            return_histograms,
+            Hist,
             bins_ra,
             &bin2d,
             &Tri2d_loc);
         counts_vec[t] = (int32_t)kcnt;
     }
 
-    if (debug)
+    if constexpr (Debug)
     {
         const char *fastpath = "false";
         if (cluster_size == 3)
@@ -788,6 +814,7 @@ static void process_largeN_trial(
         catch (...) { }
     }
 }
+
 // --- end worker refactor helpers ---
 
 // ========================= simulate helpers (top-level) =========================
@@ -914,62 +941,86 @@ static void run_simulation_and_aggregate(
 
     std::vector<std::vector<long long>> Evt2d_loc(T), Tri2d_loc(T);
 
-    auto worker = [&](int tid, int t_begin, int t_end)
+    // スレッド起動前に debug/hist に応じて固定の worker を選択する（分岐はここだけ）
+    auto make_worker = [&](auto tag_debug, auto tag_hist)
     {
-        RNG rng(seed_val ^ (0x9E3779B97F4A7C15ULL * (uint64_t)(tid + 1)));
-        ThreadBuf B(N);
+        constexpr bool Debug = decltype(tag_debug)::value;
+        constexpr bool Hist = decltype(tag_hist)::value;
+        return [&, Debug, Hist](int tid, int t_begin, int t_end)
+        {
+            RNG rng(seed_val ^ (0x9E3779B97F4A7C15ULL * (uint64_t)(tid + 1)));
+            ThreadBuf B(N);
 
+            if constexpr (Hist)
+            {
+                Evt2d_loc[tid].assign((size_t)bins_ra * (size_t)bins_dec, 0);
+                Tri2d_loc[tid].assign((size_t)bins_ra * (size_t)bins_dec, 0);
+            }
+
+            for (int t = t_begin; t < t_end; ++t)
+            {
+                if (cancel.load(std::memory_order_relaxed))
+                {
+                    break;
+                }
+                if constexpr (Debug)
+                {
+                    std::fprintf(stderr, "t=%d/%d generate events (N=%d, sites=%zu)\n",
+                                 t + 1, M, N, S.size());
+                }
+
+                generate_events_and_cache(S, rng, B);
+
+                if constexpr (Hist)
+                {
+                    update_event_histograms(
+                        N, B.ra_deg_arr, B.dec_deg_arr, tid,
+                        bins_ra,
+                        bin2d, Evt2d_loc);
+                }
+
+                if (N <= 128)
+                {
+                    process_smallN_trial<Debug, Hist>(t, M, N, tid, cluster_size, cos_thr,
+                                                       bins_ra, bin2d, log_text_dir,
+                                                       B, Evt2d_loc, Tri2d_loc, counts_vec);
+                }
+                else
+                {
+                    process_largeN_trial<Debug, Hist>(t, M, N, tid, cluster_size, cos_thr,
+                                                       bins_ra, bin2d, log_text_dir,
+                                                       B, Evt2d_loc, Tri2d_loc, counts_vec);
+                }
+
+                int c = done.fetch_add(1) + 1;
+                update_progress_bar(use_progress, c, M, start_steady, last_progress_time, print_mtx, step);
+            }
+        };
+    };
+
+    std::function<void(int,int,int)> worker_entry;
+    if (debug)
+    {
         if (return_histograms)
         {
-            Evt2d_loc[tid].assign((size_t)bins_ra * (size_t)bins_dec, 0);
-            Tri2d_loc[tid].assign((size_t)bins_ra * (size_t)bins_dec, 0);
+            worker_entry = make_worker(std::true_type{}, std::true_type{});
         }
-
-        for (int t = t_begin; t < t_end; ++t)
+        else
         {
-            if (cancel.load(std::memory_order_relaxed))
-            {
-                break;
-            }
-            if (debug)
-            {
-                std::fprintf(stderr, "t=%d/%d generate events (N=%d, sites=%zu)\n",
-                             t + 1, M, N, S.size());
-            }
-
-            generate_events_and_cache(S, rng, B);
-
-            if (return_histograms)
-            {
-                update_event_histograms(
-                    N, B.ra_deg_arr, B.dec_deg_arr, tid,
-                    bins_ra,
-                    bin2d, Evt2d_loc);
-            }
-
-            if (N <= 128)
-            {
-                process_smallN_trial(t, M, N, tid, cluster_size, cos_thr,
-                                     bins_ra, debug,
-                                     return_histograms,
-                                     bin2d, log_text_dir,
-                                     B, Evt2d_loc,
-                                     Tri2d_loc, counts_vec);
-            }
-            else
-            {
-                process_largeN_trial(t, M, N, tid, cluster_size, cos_thr,
-                                     bins_ra, debug,
-                                     return_histograms,
-                                     bin2d, log_text_dir,
-                                     B, Evt2d_loc,
-                                     Tri2d_loc, counts_vec);
-            }
-
-            int c = done.fetch_add(1) + 1;
-            update_progress_bar(use_progress, c, M, start_steady, last_progress_time, print_mtx, step);
+            worker_entry = make_worker(std::true_type{}, std::false_type{});
         }
-    };
+    }
+    else
+    {
+        if (return_histograms)
+        {
+            worker_entry = make_worker(std::false_type{}, std::true_type{});
+        }
+        else
+        {
+            worker_entry = make_worker(std::false_type{}, std::false_type{});
+        }
+    }
 
     std::vector<std::thread> ths;
     ths.reserve(T);
@@ -977,7 +1028,7 @@ static void run_simulation_and_aggregate(
     {
         int t_begin = (int)((int64_t)M * tid / T);
         int t_end = (int)((int64_t)M * (tid + 1) / T);
-        ths.emplace_back(worker, tid, t_begin, t_end);
+        ths.emplace_back(worker_entry, tid, t_begin, t_end);
     }
 
     while (!cancel.load(std::memory_order_relaxed) && done.load(std::memory_order_relaxed) < M)
