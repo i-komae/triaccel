@@ -346,36 +346,59 @@ static void process_smallN_trial(
     long long kcnt = 0;
     if constexpr (Hist)
     {
-        if constexpr (Debug)
+        if (cluster_size == 2)
         {
-            kcnt = count_k_cliques_hist_u128(
-                cluster_size, B.m0, B.m1, N, &B.in_cluster, true,
-                tid, B.x, B.y, B.z,
+            kcnt = count_pairs_hist_u128(
+                N, tid, B.m0, B.m1,
+                B.x, B.y, B.z,
+                /*mark_members=*/Debug,
+                B.in_cluster,
                 bins_ra,
                 bin2d,
                 Tri2d_loc);
         }
         else
         {
-            kcnt = count_k_cliques_hist_u128_nodebug(
-                cluster_size, B.m0, B.m1, N,
-                tid, B.x, B.y, B.z,
-                bins_ra,
-                bin2d,
-                Tri2d_loc);
+            if constexpr (Debug)
+            {
+                kcnt = count_k_cliques_hist_u128(
+                    cluster_size, B.m0, B.m1, N, &B.in_cluster, true,
+                    tid, B.x, B.y, B.z,
+                    bins_ra,
+                    bin2d,
+                    Tri2d_loc);
+            }
+            else
+            {
+                kcnt = count_k_cliques_hist_u128_nodebug(
+                    cluster_size, B.m0, B.m1, N,
+                    tid, B.x, B.y, B.z,
+                    bins_ra,
+                    bin2d,
+                    Tri2d_loc);
+            }
         }
     }
     else
     {
-        if constexpr (Debug)
+        if (cluster_size == 2)
         {
-            kcnt = count_k_cliques_nohist_u128(
-                cluster_size, B.m0, B.m1, N, &B.in_cluster, true);
+            kcnt = count_pairs_u128(B.m0, B.m1, N,
+                                   Debug ? &B.in_cluster : nullptr,
+                                   Debug);
         }
         else
         {
-            kcnt = count_k_cliques_nohist_u128_nodebug(
-                cluster_size, B.m0, B.m1, N);
+            if constexpr (Debug)
+            {
+                kcnt = count_k_cliques_nohist_u128(
+                    cluster_size, B.m0, B.m1, N, &B.in_cluster, true);
+            }
+            else
+            {
+                kcnt = count_k_cliques_nohist_u128_nodebug(
+                    cluster_size, B.m0, B.m1, N);
+            }
         }
     }
     counts_vec[t] = (int32_t)kcnt;

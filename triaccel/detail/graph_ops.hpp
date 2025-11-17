@@ -82,6 +82,75 @@ inline void push_hist_from_vertices_u128(const int *verts,
     H_2d_loc[tid][(size_t)id * (size_t)bins_ra + (size_t)ir] += 1;
 }
 
+inline long long count_pairs_hist_u128(
+    int N, int tid,
+    const std::vector<uint64_t> &m0,
+    const std::vector<uint64_t> &m1,
+    const std::vector<double> &x,
+    const std::vector<double> &y,
+    const std::vector<double> &z,
+    bool mark_members,
+    std::vector<char> &in_cluster,
+    int bins_ra,
+    const std::function<void(double, double, int &, int &)> &bin2d,
+    std::vector<std::vector<long long>> &H_2d_loc)
+{
+    long long pair_cnt = 0;
+    for (int i = 0; i < N - 1; ++i)
+    {
+        uint64_t a0 = 0ULL;
+        if (i < 63)
+        {
+            a0 = m0[i] & ~(((1ULL) << (i + 1)) - 1ULL);
+        }
+        while (a0)
+        {
+            int j = ctz64(a0); a0 &= (a0 - 1);
+            if (mark_members)
+            {
+                in_cluster[i] = 1;
+                in_cluster[j] = 1;
+            }
+            pair_cnt += 1;
+            int verts[2] = {i, j};
+            push_hist_from_vertices_u128(verts, 2, x, y, z, bins_ra, bin2d, H_2d_loc, tid);
+        }
+        uint64_t a1 = m1[i];
+        if (i >= 64)
+        {
+            int ib = i - 64;
+            if (ib < 63)
+            {
+                a1 &= ~(((1ULL) << (ib + 1)) - 1ULL);
+            }
+            else
+            {
+                a1 = 0ULL;
+            }
+        }
+        const int base = 64;
+        while (a1)
+        {
+            int jb = ctz64(a1);
+            a1 &= (a1 - 1);
+            int j = base + jb;
+            if (j >= N)
+            {
+                continue;
+            }
+            if (mark_members)
+            {
+                in_cluster[i] = 1;
+                in_cluster[j] = 1;
+            }
+            pair_cnt += 1;
+            int verts[2] = {i, j};
+            push_hist_from_vertices_u128(verts, 2, x, y, z, bins_ra, bin2d, H_2d_loc, tid);
+        }
+    }
+    return pair_cnt;
+}
+
 inline long long count_pairs_u128(const std::vector<uint64_t> &m0,
                                   const std::vector<uint64_t> &m1,
                                   int N,
