@@ -59,6 +59,14 @@
             font-weight: 600;
         }
 
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
         .step-container {
             flex: 1;
             display: flex;
@@ -164,7 +172,6 @@
 
         canvas {
             flex: 1;
-            /* Canvas background handled by JS clearRect/fillRect, but CSS bg helps initial load */
             background-color: transparent;
             width: 100%;
         }
@@ -244,6 +251,92 @@
             text-shadow: 0 0 10px rgba(236, 72, 153, 0.4);
         }
 
+        /* Config Panel (Floating) */
+        .config-wrapper {
+            position: relative;
+        }
+
+        #btn-config-toggle {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            flex: none;
+            width: auto;
+        }
+
+        #btn-config-toggle:hover {
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+        .config-panel {
+            position: absolute;
+            top: 0;
+            left: calc(100% + 0.5rem);
+            z-index: 50;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 1.25rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            width: 280px;
+            transition: opacity 0.2s, transform 0.2s;
+            transform-origin: top left;
+        }
+
+        .config-panel.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+            display: none;
+            /* Fully hide to prevent interaction */
+        }
+
+        .config-item {
+            margin-bottom: 1rem;
+        }
+
+        .config-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .config-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #3b82f6;
+            height: 4px;
+            background: #334155;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
         .legend {
             position: absolute;
             top: 1.5rem;
@@ -256,6 +349,7 @@
             font-size: 0.85rem;
             pointer-events: none;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 20;
         }
 
         .legend-item {
@@ -274,7 +368,6 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
         }
 
         .line {
@@ -302,7 +395,28 @@
 <body>
 
     <div class="sidebar">
-        <h1>トリプレット探索</h1>
+        <div class="sidebar-header">
+            <h1>トリプレット探索</h1>
+            <div class="config-wrapper">
+                <button id="btn-config-toggle">⚙️ 設定</button>
+                <div class="config-panel hidden" id="config-panel">
+                    <div class="config-item">
+                        <div class="config-label">
+                            <span>点の数 (Point Count)</span>
+                            <span id="val-point-count">30</span>
+                        </div>
+                        <input type="number" id="input-point-count" value="30" min="5" max="100">
+                    </div>
+                    <div class="config-item">
+                        <div class="config-label">
+                            <span>アニメーション速度 (Speed)</span>
+                            <span id="val-speed">800ms</span>
+                        </div>
+                        <input type="range" id="input-speed" min="100" max="2000" step="100" value="800">
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="subtitle">アルゴリズムの可視化</div>
 
         <div class="step-container">
@@ -339,6 +453,7 @@
     <div class="main-view">
         <canvas id="viz-canvas"></canvas>
 
+
         <!-- Status Bar -->
         <div id="status-bar">
             <div class="status-item">
@@ -361,22 +476,22 @@
 
         <div class="legend">
             <div class="legend-item">
-                <div class="dot" style="background: #64748b"></div><span>未処理の点</span>
+                <div class="dot" style="background: #64748b;"></div><span>未処理の点</span>
             </div>
             <div class="legend-item">
-                <div class="dot" style="background: #fbbf24"></div><span>ピボット (<span class="math">i</span>)</span>
+                <div class="dot" style="background: #fbbf24;"></div><span>ピボット (<span class="math">i</span>)</span>
             </div>
             <div class="legend-item">
-                <div class="dot" style="background: #22d3ee"></div><span>近傍点 (<span class="math">j</span>)</span>
+                <div class="dot" style="background: #22d3ee;"></div><span>近傍点 (<span class="math">j</span>)</span>
             </div>
             <div class="legend-item">
-                <div class="line" style="background: #fbbf24"></div><span>探索半径 (<span class="math">r</span>)</span>
+                <div class="line" style="background: #10b981;"></div><span>接続あり (OK)</span>
             </div>
             <div class="legend-item">
-                <div class="line" style="background: #94a3b8"></div><span>隣接エッジ</span>
+                <div class="line" style="background: #ef4444;"></div><span>接続なし (NG)</span>
             </div>
             <div class="legend-item">
-                <div class="line" style="background: #ec4899"></div><span>検出された三角形</span>
+                <div class="line" style="background: #ec4899;"></div><span>検出された三角形</span>
             </div>
         </div>
         <div id="error-msg"></div>
@@ -386,8 +501,8 @@
         // --- Configuration ---
         const CONFIG = {
             pointCount: 30,
-            connectionDistance: 150, // Increased to 150
-            pointRadius: 5,
+            connectionDistance: 150,
+            pointRadius: 6,
             colors: {
                 bg: '#0f172a',
                 inactive: '#64748b',
@@ -398,14 +513,15 @@
                 triangleFound: 'rgba(236, 72, 153, 0.15)', // Pink (Persisted)
                 radius: 'rgba(251, 191, 36, 0.1)',
                 radiusBorder: 'rgba(251, 191, 36, 0.5)',
-                checkLine: 'rgba(255, 255, 255, 0.4)',
-                edge: 'rgba(148, 163, 184, 0.6)' // Visible Slate
+                checkLineNeutral: 'rgba(255, 255, 255, 0.3)',
+                checkLineOk: '#10b981', // Emerald
+                checkLineNg: '#ef4444', // Red
+                edge: 'rgba(148, 163, 184, 0.4)'
             },
             speeds: {
                 gen: 50,
-                build: 50,
-                step: 800,
-                check: 800
+                build: 100,
+                main: 800 // Unified speed
             }
         };
 
@@ -416,6 +532,16 @@
         let width, height;
         let isRunning = false;
         let abortController = null;
+
+        function drawEmptyPrompt() {
+            ctx.fillStyle = CONFIG.colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('「シミュレーション開始」をクリックしてください', width / 2, height / 2);
+        }
 
         // --- Initialization ---
         window.onerror = function (msg, url, line) {
@@ -435,15 +561,48 @@
             document.getElementById('btn-start').addEventListener('click', startSimulation);
             document.getElementById('btn-reset').addEventListener('click', reset);
 
-            resize();
-            // Show empty state
-            ctx.fillStyle = CONFIG.colors.bg;
-            ctx.fillRect(0, 0, width, height);
+            // Config Toggle
+            const toggleBtn = document.getElementById('btn-config-toggle');
+            const configPanel = document.getElementById('config-panel');
+            toggleBtn.addEventListener('click', () => {
+                if (configPanel.classList.contains('hidden')) {
+                    configPanel.classList.remove('hidden');
+                    configPanel.style.display = 'block'; // Ensure display is block before opacity transition
+                    // Small timeout to allow display change to register for transition
+                    setTimeout(() => {
+                        configPanel.style.opacity = '1';
+                        configPanel.style.transform = 'scale(1)';
+                    }, 10);
+                } else {
+                    configPanel.style.opacity = '0';
+                    configPanel.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        configPanel.classList.add('hidden');
+                        configPanel.style.display = 'none';
+                    }, 200); // Match transition duration
+                }
+            });
 
-            ctx.fillStyle = '#64748b';
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('「シミュレーション開始」をクリックしてください', width / 2, height / 2);
+            // Config Listeners
+            const speedInput = document.getElementById('input-speed');
+            const speedVal = document.getElementById('val-speed');
+            speedInput.addEventListener('input', (e) => {
+                CONFIG.speeds.main = parseInt(e.target.value);
+                speedVal.textContent = CONFIG.speeds.main + 'ms';
+            });
+
+            const countInput = document.getElementById('input-point-count');
+            const countVal = document.getElementById('val-point-count');
+            countInput.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value);
+                if (val < 5) val = 5;
+                if (val > 100) val = 100;
+                CONFIG.pointCount = val;
+                countVal.textContent = val;
+            });
+
+            resize();
+            drawEmptyPrompt();
         }
 
         function resize() {
@@ -453,16 +612,13 @@
             height = parent.clientHeight - 110;
             canvas.width = width;
             canvas.height = height;
-            if (!isRunning && points.length > 0) {
-                ctx.fillStyle = CONFIG.colors.bg;
-                ctx.fillRect(0, 0, width, height);
-            } else if (!isRunning) {
-                ctx.fillStyle = CONFIG.colors.bg;
-                ctx.fillRect(0, 0, width, height);
-                ctx.fillStyle = '#64748b';
-                ctx.font = '16px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('「シミュレーション開始」をクリックしてください', width / 2, height / 2);
+            if (!isRunning) {
+                if (points.length > 0) {
+                    ctx.fillStyle = CONFIG.colors.bg;
+                    ctx.fillRect(0, 0, width, height);
+                } else {
+                    drawEmptyPrompt();
+                }
             }
         }
 
@@ -474,25 +630,22 @@
             isRunning = false;
             document.getElementById('btn-start').disabled = false;
             document.getElementById('btn-reset').disabled = false;
+            document.getElementById('input-point-count').disabled = false;
             setActiveStep(null);
             points = [];
             allFoundTriangles = [];
             updateStatus('-', [], null, [], null, 0);
 
-            ctx.fillStyle = CONFIG.colors.bg;
-            ctx.fillRect(0, 0, width, height);
-
-            ctx.fillStyle = '#64748b';
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('「シミュレーション開始」をクリックしてください', width / 2, height / 2);
+            drawEmptyPrompt();
 
             document.getElementById('error-msg').style.display = 'none';
         }
 
         // Updated to handle lists
         function updateStatus(i, jList, activeJ, kList, activeK, count) {
-            document.getElementById('val-i').textContent = i !== null ? i : '-';
+            // 1-based indexing for display
+            const displayI = i !== null && i !== '-' ? (i + 1) : '-';
+            document.getElementById('val-i').textContent = displayI;
 
             // Render J List
             const jContainer = document.getElementById('val-j');
@@ -500,7 +653,7 @@
             if (jList && jList.length > 0) {
                 jList.forEach(jVal => {
                     const span = document.createElement('span');
-                    span.textContent = jVal;
+                    span.textContent = (jVal + 1); // 1-based
                     span.className = 'list-item';
                     if (jVal === activeJ) span.classList.add('active');
                     jContainer.appendChild(span);
@@ -515,7 +668,7 @@
             if (kList && kList.length > 0) {
                 kList.forEach(kVal => {
                     const span = document.createElement('span');
-                    span.textContent = kVal;
+                    span.textContent = (kVal + 1); // 1-based
                     span.className = 'list-item';
                     if (kVal === activeK) span.classList.add('active-k');
                     kContainer.appendChild(span);
@@ -528,12 +681,12 @@
         }
 
         // --- Drawing ---
-        function draw(activePivot = null, neighbors = [], activeJ = null, currentTriangle = null, checkPair = null, adj = null, showRadius = true) {
+        // checkResult: true (connected), false (not connected), or null (neutral/checking)
+        function draw(activePivot = null, neighbors = [], activeJ = null, currentTriangle = null, checkPair = null, checkResult = null, adj = null, showRadius = true) {
             if (points.length === 0) return;
 
             // Clear
-            ctx.fillStyle = CONFIG.colors.bg;
-            ctx.fillRect(0, 0, width, height);
+            ctx.clearRect(0, 0, width, height);
 
             // 1. Draw All Edges
             if (adj) {
@@ -580,9 +733,27 @@
                 ctx.beginPath();
                 ctx.moveTo(checkPair[0].x, checkPair[0].y);
                 ctx.lineTo(checkPair[1].x, checkPair[1].y);
-                ctx.strokeStyle = CONFIG.colors.checkLine;
-                ctx.lineWidth = 2;
-                ctx.setLineDash([2, 2]);
+
+                let strokeStyle = CONFIG.colors.checkLineNeutral;
+                let lineWidth = 2;
+
+                if (checkResult === true) {
+                    strokeStyle = CONFIG.colors.checkLineOk;
+                    lineWidth = 3;
+                } else if (checkResult === false) {
+                    strokeStyle = CONFIG.colors.checkLineNg;
+                    lineWidth = 3;
+                }
+
+                ctx.strokeStyle = strokeStyle;
+                ctx.lineWidth = lineWidth;
+
+                if (checkResult === null) {
+                    ctx.setLineDash([4, 4]);
+                } else {
+                    ctx.setLineDash([]);
+                }
+
                 ctx.stroke();
                 ctx.setLineDash([]);
             }
@@ -634,11 +805,14 @@
                 ctx.fillStyle = color;
                 ctx.fill();
 
-                // Label (Index)
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = '12px sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText(p.id, p.x + 8, p.y + 4);
+                // Label (Index) - 1-based
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = 'bold 12px "JetBrains Mono"';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                // Draw text centered on dot or slightly offset?
+                // Let's offset it to avoid cluttering the glow
+                ctx.fillText(p.id + 1, p.x + 12, p.y - 12);
             });
         }
 
@@ -653,6 +827,7 @@
 
             document.getElementById('btn-start').disabled = true;
             document.getElementById('btn-reset').disabled = false;
+            document.getElementById('input-point-count').disabled = true;
             document.getElementById('error-msg').style.display = 'none';
             updateStatus('-', [], null, [], null, 0);
 
@@ -700,30 +875,32 @@
                     // Update status to show we are working on i
                     await sleep(CONFIG.speeds.build);
                     updateStatus(i, [], null, [], null, 0);
-                    draw(points[i], [], null, null, null, adj, false); // No radius
+                    draw(points[i], [], null, null, null, null, adj, false); // No radius
 
                     for (let j = i + 1; j < points.length; j++) {
                         const neighbor = points[j];
+                        const dist = Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y);
+                        const isConnected = dist <= CONFIG.connectionDistance;
 
-                        // Visualize check i-j
+                        // Visualize check i-j with result color
                         await sleep(CONFIG.speeds.build);
                         updateStatus(i, [j], j, [], null, 0); // Show j in list
-                        // Draw check line (using checkPair argument)
-                        draw(points[i], [], neighbor, null, [points[i], neighbor], adj, false); // No radius
 
-                        const dist = Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y);
-                        if (dist <= CONFIG.connectionDistance) {
+                        // Draw check line with result status
+                        draw(points[i], [], neighbor, null, [points[i], neighbor], isConnected, adj, false);
+
+                        if (isConnected) {
                             adj[i].push(j);
                             adj[j].push(i);
                             // Show new edge
                             await sleep(CONFIG.speeds.build);
                             updateStatus(i, [j], j, [], null, 0);
-                            draw(points[i], [], null, null, null, adj, false); // No radius
+                            draw(points[i], [], null, null, null, null, adj, false);
                         }
                     }
                 }
                 await sleep(CONFIG.speeds.build);
-                draw(null, [], null, null, null, adj, false);
+                draw(null, [], null, null, null, null, adj, false);
                 await sleep(500);
 
                 // --- STEP 2-4: Triplet Search ---
@@ -734,60 +911,61 @@
 
                     // STEP 2: Select Pivot
                     setActiveStep(2);
-                    // Removed redundant sleep here (handled by end of loop)
                     updateStatus(i, [], null, [], null, allFoundTriangles.length);
-                    draw(pivot, [], null, null, null, adj);
+                    draw(pivot, [], null, null, null, null, adj, false);
 
                     // STEP 3: Filter Neighbors (j > i)
-                    setActiveStep(3);
                     const validNeighbors = adj[i]
                         .filter(idx => idx > i)
                         .map(idx => points[idx]);
                     const validNeighborIds = validNeighbors.map(p => p.id);
 
-                    await sleep(CONFIG.speeds.step);
+                    await sleep(CONFIG.speeds.main);
+                    setActiveStep(3);
                     updateStatus(i, validNeighborIds, null, [], null, allFoundTriangles.length);
-                    draw(pivot, validNeighbors, null, null, null, adj);
+                    draw(pivot, validNeighbors, null, null, null, null, adj, false);
 
                     // STEP 4: Find Triangles
                     if (validNeighbors.length >= 1) {
-                        setActiveStep(4);
 
                         for (let idxJ = 0; idxJ < validNeighbors.length; idxJ++) {
                             if (signal.aborted) throw new Error("Aborted");
                             const neighborJ = validNeighbors[idxJ];
                             const j = neighborJ.id;
 
-                            // NEW LOGIC: Check connections between two neighbors of i
                             // Candidates for k are other neighbors of i, with k > j
                             const validKs = validNeighbors.filter(n => n.id > j);
                             const validKIds = validKs.map(n => n.id);
 
-                            await sleep(CONFIG.speeds.check);
+                            await sleep(CONFIG.speeds.main);
+                            setActiveStep(4);
                             updateStatus(i, validNeighborIds, j, validKIds, null, allFoundTriangles.length);
-                            draw(pivot, validNeighbors, neighborJ, null, null, adj);
+                            draw(pivot, validNeighbors, neighborJ, null, null, null, adj, false);
 
                             for (let neighborK of validKs) {
                                 const k = neighborK.id;
+                                const isConnected = adj[j].includes(k);
 
-                                await sleep(CONFIG.speeds.check);
+                                await sleep(CONFIG.speeds.main);
                                 updateStatus(i, validNeighborIds, j, validKIds, k, allFoundTriangles.length);
-                                draw(pivot, validNeighbors, neighborJ, null, [neighborJ, neighborK], adj);
+
+                                // Draw check line with result status
+                                draw(pivot, validNeighbors, neighborJ, null, [neighborJ, neighborK], isConnected, adj, false);
 
                                 // Check if j and k are connected
-                                if (adj[j].includes(k)) {
+                                if (isConnected) {
                                     const newTri = [pivot, neighborJ, neighborK];
                                     allFoundTriangles.push(newTri);
 
-                                    await sleep(CONFIG.speeds.step);
+                                    await sleep(CONFIG.speeds.main);
                                     updateStatus(i, validNeighborIds, j, validKIds, k, allFoundTriangles.length);
-                                    draw(pivot, validNeighbors, neighborJ, newTri, null, adj);
+                                    draw(pivot, validNeighbors, neighborJ, newTri, null, null, adj, false);
                                 }
                             }
                         }
-                        await sleep(CONFIG.speeds.step);
+                        await sleep(CONFIG.speeds.main);
                         updateStatus(i, validNeighborIds, null, [], null, allFoundTriangles.length);
-                        draw(null, [], null, null, null, adj);
+                        draw(null, [], null, null, null, null, adj);
                     }
                 }
             } catch (e) {
@@ -799,6 +977,7 @@
             } finally {
                 isRunning = false;
                 document.getElementById('btn-start').disabled = false;
+                document.getElementById('input-point-count').disabled = false;
                 setActiveStep(null);
             }
         }
