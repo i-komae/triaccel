@@ -345,33 +345,6 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
-        .legend {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(8px);
-            padding: 1.25rem;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.85rem;
-            pointer-events: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            z-index: 20;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 0.75rem;
-            color: #cbd5e1;
-        }
-
-        .legend-item:last-child {
-            margin-bottom: 0;
-        }
-
         .dot {
             width: 10px;
             height: 10px;
@@ -398,7 +371,7 @@
             font-weight: 500;
         }
 
-        @media (max-width: 768px) {
+        @media (max-aspect-ratio: 1/1) {
             body {
                 flex-direction: column;
                 height: auto;
@@ -500,10 +473,6 @@
 
             .status-value.highlight {
                 font-size: 1.3rem;
-            }
-
-            .legend {
-                display: none;
             }
 
             .config-panel {
@@ -617,26 +586,6 @@
             </div>
         </div>
 
-        <div class="legend">
-            <div class="legend-item">
-                <div class="dot" style="background: #64748b;"></div><span>未処理の点</span>
-            </div>
-            <div class="legend-item">
-                <div class="dot" style="background: #fbbf24;"></div><span>ピボット (<span class="math">i</span>)</span>
-            </div>
-            <div class="legend-item">
-                <div class="dot" style="background: #22d3ee;"></div><span>近傍点 (<span class="math">j</span>)</span>
-            </div>
-            <div class="legend-item">
-                <div class="line" style="background: #10b981;"></div><span>接続あり (OK)</span>
-            </div>
-            <div class="legend-item">
-                <div class="line" style="background: #ef4444;"></div><span>接続なし (NG)</span>
-            </div>
-            <div class="legend-item">
-                <div class="line" style="background: #ec4899;"></div><span>検出された三角形</span>
-            </div>
-        </div>
         <div id="error-msg"></div>
     </div>
 
@@ -774,7 +723,8 @@
             const parent = canvas.parentElement;
             width = parent.clientWidth;
 
-            if (window.innerWidth <= 768) {
+            const isPortrait = (window.innerHeight || document.documentElement.clientHeight || 1) >= (window.innerWidth || document.documentElement.clientWidth || 1);
+            if (isPortrait) {
                 const vh = window.innerHeight || document.documentElement.clientHeight || 600;
                 height = Math.max(200, Math.round(vh * 0.4));
             } else {
@@ -1003,8 +953,6 @@
                 points = [];
                 allFoundTriangles = [];
                 const padding = Math.max(30, Math.min(60, Math.round(Math.min(width, height) * 0.06)));
-                const legendSafeMarginX = Math.min(220, width * 0.3);
-                const legendSafeMarginY = Math.min(220, height * 0.3);
 
                 for (let i = 0; i < CONFIG.pointCount; i++) {
                     if (signal.aborted) throw new Error("Aborted");
@@ -1016,9 +964,6 @@
                         x = padding + Math.random() * (width - padding * 2);
                         y = padding + Math.random() * (height - padding * 2);
 
-                        if (x > width - legendSafeMarginX && y < legendSafeMarginY) {
-                            safe = false;
-                        }
                         attempts++;
                     } while (!safe && attempts < 50);
 
