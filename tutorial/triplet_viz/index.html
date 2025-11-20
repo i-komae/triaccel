@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>トリプレット探索アルゴリズムの可視化</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Left Panel: Explanation */
+        .sidebar {
+            width: 400px;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #60a5fa, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .step-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .step {
+            padding: 1.25rem;
+            border-radius: 12px;
+            background-color: rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-left: 4px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.6;
+        }
+
+        .step.active {
+            background-color: rgba(30, 41, 59, 0.9);
+            border-left-color: #3b82f6;
+            border-color: rgba(59, 130, 246, 0.3);
+            opacity: 1;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            transform: translateX(4px);
+        }
+
+        .step h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+            color: #f8fafc;
+            font-weight: 600;
+        }
+
+        .step p {
+            margin: 0;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+
+        .math {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+
+        .controls {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #btn-start {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        #btn-start:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        #btn-start:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #btn-reset {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        #btn-reset:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        /* Right Panel: Visualization */
+        .main-view {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        canvas {
+            flex: 1;
+            /* Canvas background handled by JS clearRect/fillRect, but CSS bg helps initial load */
+            background-color: transparent;
+            width: 100%;
+        }
+
+        /* Status Bar Area */
+        #status-bar {
+            height: 110px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-around;
+            padding: 1.5rem 2rem;
+            font-family: 'JetBrains Mono', monospace;
+            flex-shrink: 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 120px;
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #94a3b8;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-value {
+            font-size: 1.25rem;
+            color: #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            max-width: 300px;
+        }
+
+        .status-value.highlight {
+            color: #fbbf24;
+            font-weight: 700;
+            font-size: 1.75rem;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+        }
+
+        /* List Item Styles */
+        .list-item {
+            color: #64748b;
+            padding: 0 3px;
+            transition: color 0.2s;
+        }
+
+        .list-item.active {
+            color: #a855f7;
+            /* Purple for active J */
+            font-weight: bold;
+            font-size: 1.4rem;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+        }
+
+        .list-item.active-k {
+            color: #ec4899;
+            /* Pink for K */
+            font-weight: bold;
+            font-size: 1.4rem;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            text-shadow: 0 0 10px rgba(236, 72, 153, 0.4);
+        }
+
+        .legend {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 1.25rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85rem;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            color: #cbd5e1;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .line {
+            width: 24px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        #error-msg {
+            position: absolute;
+            bottom: 130px;
+            left: 1.5rem;
+            color: white;
+            background: rgba(239, 68, 68, 0.95);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <h1>トリプレット探索</h1>
+        <div class="subtitle">アルゴリズムの可視化</div>
+
+        <div class="step-container">
+            <div class="step" id="step-0">
+                <h3>0. 初期化</h3>
+                <p>空間内にランダムな点を生成します。</p>
+            </div>
+            <div class="step" id="step-1">
+                <h3>1. グラフ構築（隣接関係）</h3>
+                <p>各点について、探索半径 <span class="math">r</span> 以内にある近傍点を探し、隣接行列（エッジ）を構築します。</p>
+            </div>
+            <div class="step" id="step-2">
+                <h3>2. ピボット選択 (<span class="math">i</span>)</h3>
+                <p>データセット内の点を順に「ピボット（中心点）」として選択します。</p>
+            </div>
+            <div class="step" id="step-3">
+                <h3>3. 近傍点のフィルタリング (<span class="math">j</span> &gt; <span class="math">i</span>)</h3>
+                <p>ピボット <span class="math">i</span> の近傍点のうち、インデックスが <span class="math">i</span> より大きい点 <span
+                        class="math">j</span> のみを候補とします（重複カウント防止）。</p>
+            </div>
+            <div class="step" id="step-4">
+                <h3>4. 三角形の検出</h3>
+                <p>候補点 <span class="math">j</span> について、さらに <span class="math">j</span> よりインデックスが大きい近傍点 <span
+                        class="math">k</span> と接続しているか確認します。接続していれば、(<span class="math">i, j, k</span>) は三角形を形成します。</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="btn-reset">リセット</button>
+            <button id="btn-start">シミュレーション開始</button>
+        </div>
+    </div>
+
+    <div class="main-view">
+        <canvas id="viz-canvas"></canvas>
+
+        <!-- Status Bar -->
+        <div id="status-bar">
+            <div class="status-item">
+                <div class="status-label">Pivot (i)</div>
+                <div class="status-value highlight" id="val-i">-</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Neighbors (j &gt; i)</div>
+                <div class="status-value" id="val-j">-</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Checks (k &gt; j)</div>
+                <div class="status-value" id="val-k">-</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Total Triplets</div>
+                <div class="status-value highlight" id="val-count">0</div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="dot" style="background: #64748b"></div><span>未処理の点</span>
+            </div>
+            <div class="legend-item">
+                <div class="dot" style="background: #fbbf24"></div><span>ピボット (<span class="math">i</span>)</span>
+            </div>
+            <div class="legend-item">
+                <div class="dot" style="background: #22d3ee"></div><span>近傍点 (<span class="math">j</span>)</span>
+            </div>
+            <div class="legend-item">
+                <div class="line" style="background: #fbbf24"></div><span>探索半径 (<span class="math">r</span>)</span>
+            </div>
+            <div class="legend-item">
+                <div class="line" style="background: #94a3b8"></div><span>隣接エッジ</span>
+            </div>
+            <div class="legend-item">
+                <div class="line" style="background: #ec4899"></div><span>検出された三角形</span>
+            </div>
+        </div>
+        <div id="error-msg"></div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const CONFIG = {
+            pointCount: 30,
+            connectionDistance: 150, // Increased to 150
+            pointRadius: 5,
+            colors: {
+                bg: '#0f172a',
+                inactive: '#64748b',
+                pivot: '#fbbf24', // Amber
+                neighbor: '#22d3ee', // Cyan
+                secondary: '#a855f7', // Purple (for j)
+                triangle: '#ec4899', // Pink (Active)
+                triangleFound: 'rgba(236, 72, 153, 0.15)', // Pink (Persisted)
+                radius: 'rgba(251, 191, 36, 0.1)',
+                radiusBorder: 'rgba(251, 191, 36, 0.5)',
+                checkLine: 'rgba(255, 255, 255, 0.4)',
+                edge: 'rgba(148, 163, 184, 0.6)' // Visible Slate
+            },
+            speeds: {
+                gen: 50,
+                build: 50,
+                step: 800,
+                check: 800
+            }
+        };
+
+        // --- State ---
+        let canvas, ctx;
+        let points = [];
+        let allFoundTriangles = [];
+        let width, height;
+        let isRunning = false;
+        let abortController = null;
+
+        // --- Initialization ---
+        window.onerror = function (msg, url, line) {
+            const errDiv = document.getElementById('error-msg');
+            errDiv.style.display = 'block';
+            errDiv.textContent = `Error: ${msg} (Line ${line})`;
+            return false;
+        };
+
+        window.addEventListener('load', init);
+        window.addEventListener('resize', resize);
+
+        function init() {
+            canvas = document.getElementById('viz-canvas');
+            ctx = canvas.getContext('2d');
+
+            document.getElementById('btn-start').addEventListener('click', startSimulation);
+            document.getElementById('btn-reset').addEventListener('click', reset);
+
+            resize();
+            // Show empty state
+            ctx.fillStyle = CONFIG.colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('「シミュレーション開始」をクリックしてください', width / 2, height / 2);
+        }
+
+        function resize() {
+            const parent = canvas.parentElement;
+            // Adjust for status bar height (110px)
+            width = parent.clientWidth;
+            height = parent.clientHeight - 110;
+            canvas.width = width;
+            canvas.height = height;
+            if (!isRunning && points.length > 0) {
+                ctx.fillStyle = CONFIG.colors.bg;
+                ctx.fillRect(0, 0, width, height);
+            } else if (!isRunning) {
+                ctx.fillStyle = CONFIG.colors.bg;
+                ctx.fillRect(0, 0, width, height);
+                ctx.fillStyle = '#64748b';
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('「シミュレーション開始」をクリックしてください', width / 2, height / 2);
+            }
+        }
+
+        function reset() {
+            if (abortController) {
+                abortController.abort();
+                abortController = null;
+            }
+            isRunning = false;
+            document.getElementById('btn-start').disabled = false;
+            document.getElementById('btn-reset').disabled = false;
+            setActiveStep(null);
+            points = [];
+            allFoundTriangles = [];
+            updateStatus('-', [], null, [], null, 0);
+
+            ctx.fillStyle = CONFIG.colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('「シミュレーション開始」をクリックしてください', width / 2, height / 2);
+
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        // Updated to handle lists
+        function updateStatus(i, jList, activeJ, kList, activeK, count) {
+            document.getElementById('val-i').textContent = i !== null ? i : '-';
+
+            // Render J List
+            const jContainer = document.getElementById('val-j');
+            jContainer.innerHTML = '';
+            if (jList && jList.length > 0) {
+                jList.forEach(jVal => {
+                    const span = document.createElement('span');
+                    span.textContent = jVal;
+                    span.className = 'list-item';
+                    if (jVal === activeJ) span.classList.add('active');
+                    jContainer.appendChild(span);
+                });
+            } else {
+                jContainer.textContent = '-';
+            }
+
+            // Render K List
+            const kContainer = document.getElementById('val-k');
+            kContainer.innerHTML = '';
+            if (kList && kList.length > 0) {
+                kList.forEach(kVal => {
+                    const span = document.createElement('span');
+                    span.textContent = kVal;
+                    span.className = 'list-item';
+                    if (kVal === activeK) span.classList.add('active-k');
+                    kContainer.appendChild(span);
+                });
+            } else {
+                kContainer.textContent = '-';
+            }
+
+            document.getElementById('val-count').textContent = count;
+        }
+
+        // --- Drawing ---
+        function draw(activePivot = null, neighbors = [], activeJ = null, currentTriangle = null, checkPair = null, adj = null, showRadius = true) {
+            if (points.length === 0) return;
+
+            // Clear
+            ctx.fillStyle = CONFIG.colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            // 1. Draw All Edges
+            if (adj) {
+                ctx.beginPath();
+                for (let i = 0; i < adj.length; i++) {
+                    for (let j of adj[i]) {
+                        if (i < j) {
+                            if (points[i] && points[j]) {
+                                ctx.moveTo(points[i].x, points[i].y);
+                                ctx.lineTo(points[j].x, points[j].y);
+                            }
+                        }
+                    }
+                }
+                ctx.strokeStyle = CONFIG.colors.edge;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // 2. Draw Search Radius
+            if (activePivot && showRadius) {
+                ctx.beginPath();
+                ctx.arc(activePivot.x, activePivot.y, CONFIG.connectionDistance, 0, Math.PI * 2);
+                ctx.fillStyle = CONFIG.colors.radius;
+                ctx.fill();
+                ctx.strokeStyle = CONFIG.colors.radiusBorder;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // 3. Draw Active Edges (Pivot -> Neighbors)
+            neighbors.forEach(n => {
+                ctx.beginPath();
+                ctx.moveTo(activePivot.x, activePivot.y);
+                ctx.lineTo(n.x, n.y);
+                ctx.strokeStyle = CONFIG.colors.neighbor;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // 4. Draw Check Line
+            if (checkPair) {
+                ctx.beginPath();
+                ctx.moveTo(checkPair[0].x, checkPair[0].y);
+                ctx.lineTo(checkPair[1].x, checkPair[1].y);
+                ctx.strokeStyle = CONFIG.colors.checkLine;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([2, 2]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // 5. Draw Persisted Triangles
+            allFoundTriangles.forEach(t => {
+                const [p1, p2, p3] = t;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.lineTo(p3.x, p3.y);
+                ctx.closePath();
+                ctx.fillStyle = CONFIG.colors.triangleFound;
+                ctx.fill();
+            });
+
+            // 6. Draw Current Triangle (Active)
+            if (currentTriangle) {
+                const [p1, p2, p3] = currentTriangle;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.lineTo(p3.x, p3.y);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(236, 72, 153, 0.6)';
+                ctx.fill();
+                ctx.strokeStyle = CONFIG.colors.triangle;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            // 7. Draw Points
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, CONFIG.pointRadius, 0, Math.PI * 2);
+
+                let color = CONFIG.colors.inactive;
+
+                if (p === activePivot) {
+                    color = CONFIG.colors.pivot;
+                } else if (p === activeJ) {
+                    color = CONFIG.colors.secondary; // Highlight J
+                } else if (checkPair && checkPair[1] === p) {
+                    color = CONFIG.colors.triangle; // Highlight K (Check)
+                } else if (neighbors.includes(p)) {
+                    color = CONFIG.colors.neighbor;
+                }
+
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Label (Index)
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(p.id, p.x + 8, p.y + 4);
+            });
+        }
+
+        // --- Simulation Logic ---
+        async function startSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+
+            if (abortController) abortController.abort();
+            abortController = new AbortController();
+            const signal = abortController.signal;
+
+            document.getElementById('btn-start').disabled = true;
+            document.getElementById('btn-reset').disabled = false;
+            document.getElementById('error-msg').style.display = 'none';
+            updateStatus('-', [], null, [], null, 0);
+
+            try {
+                // --- STEP 0: Generate Points ---
+                setActiveStep(0);
+                points = [];
+                allFoundTriangles = [];
+                const padding = 50;
+                const legendSafeMarginX = 220;
+                const legendSafeMarginY = 220;
+
+                for (let i = 0; i < CONFIG.pointCount; i++) {
+                    if (signal.aborted) throw new Error("Aborted");
+
+                    let x, y, safe;
+                    let attempts = 0;
+                    do {
+                        safe = true;
+                        x = padding + Math.random() * (width - padding * 2);
+                        y = padding + Math.random() * (height - padding * 2);
+
+                        if (x > width - legendSafeMarginX && y < legendSafeMarginY) {
+                            safe = false;
+                        }
+                        attempts++;
+                    } while (!safe && attempts < 50);
+
+                    points.push({
+                        x: x,
+                        y: y,
+                        id: i
+                    });
+                    await sleep(CONFIG.speeds.gen);
+                    draw();
+                }
+
+                // --- STEP 1: Build Graph ---
+                setActiveStep(1);
+                const adj = new Array(points.length).fill(0).map(() => []);
+                for (let i = 0; i < points.length; i++) {
+                    if (signal.aborted) throw new Error("Aborted");
+
+                    const pivot = points[i];
+                    // Update status to show we are working on i
+                    await sleep(CONFIG.speeds.build);
+                    updateStatus(i, [], null, [], null, 0);
+                    draw(points[i], [], null, null, null, adj, false); // No radius
+
+                    for (let j = i + 1; j < points.length; j++) {
+                        const neighbor = points[j];
+
+                        // Visualize check i-j
+                        await sleep(CONFIG.speeds.build);
+                        updateStatus(i, [j], j, [], null, 0); // Show j in list
+                        // Draw check line (using checkPair argument)
+                        draw(points[i], [], neighbor, null, [points[i], neighbor], adj, false); // No radius
+
+                        const dist = Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y);
+                        if (dist <= CONFIG.connectionDistance) {
+                            adj[i].push(j);
+                            adj[j].push(i);
+                            // Show new edge
+                            await sleep(CONFIG.speeds.build);
+                            updateStatus(i, [j], j, [], null, 0);
+                            draw(points[i], [], null, null, null, adj, false); // No radius
+                        }
+                    }
+                }
+                await sleep(CONFIG.speeds.build);
+                draw(null, [], null, null, null, adj, false);
+                await sleep(500);
+
+                // --- STEP 2-4: Triplet Search ---
+                for (let i = 0; i < points.length; i++) {
+                    if (signal.aborted) throw new Error("Aborted");
+
+                    const pivot = points[i];
+
+                    // STEP 2: Select Pivot
+                    setActiveStep(2);
+                    // Removed redundant sleep here (handled by end of loop)
+                    updateStatus(i, [], null, [], null, allFoundTriangles.length);
+                    draw(pivot, [], null, null, null, adj);
+
+                    // STEP 3: Filter Neighbors (j > i)
+                    setActiveStep(3);
+                    const validNeighbors = adj[i]
+                        .filter(idx => idx > i)
+                        .map(idx => points[idx]);
+                    const validNeighborIds = validNeighbors.map(p => p.id);
+
+                    await sleep(CONFIG.speeds.step);
+                    updateStatus(i, validNeighborIds, null, [], null, allFoundTriangles.length);
+                    draw(pivot, validNeighbors, null, null, null, adj);
+
+                    // STEP 4: Find Triangles
+                    if (validNeighbors.length >= 1) {
+                        setActiveStep(4);
+
+                        for (let idxJ = 0; idxJ < validNeighbors.length; idxJ++) {
+                            if (signal.aborted) throw new Error("Aborted");
+                            const neighborJ = validNeighbors[idxJ];
+                            const j = neighborJ.id;
+
+                            // NEW LOGIC: Check connections between two neighbors of i
+                            // Candidates for k are other neighbors of i, with k > j
+                            const validKs = validNeighbors.filter(n => n.id > j);
+                            const validKIds = validKs.map(n => n.id);
+
+                            await sleep(CONFIG.speeds.check);
+                            updateStatus(i, validNeighborIds, j, validKIds, null, allFoundTriangles.length);
+                            draw(pivot, validNeighbors, neighborJ, null, null, adj);
+
+                            for (let neighborK of validKs) {
+                                const k = neighborK.id;
+
+                                await sleep(CONFIG.speeds.check);
+                                updateStatus(i, validNeighborIds, j, validKIds, k, allFoundTriangles.length);
+                                draw(pivot, validNeighbors, neighborJ, null, [neighborJ, neighborK], adj);
+
+                                // Check if j and k are connected
+                                if (adj[j].includes(k)) {
+                                    const newTri = [pivot, neighborJ, neighborK];
+                                    allFoundTriangles.push(newTri);
+
+                                    await sleep(CONFIG.speeds.step);
+                                    updateStatus(i, validNeighborIds, j, validKIds, k, allFoundTriangles.length);
+                                    draw(pivot, validNeighbors, neighborJ, newTri, null, adj);
+                                }
+                            }
+                        }
+                        await sleep(CONFIG.speeds.step);
+                        updateStatus(i, validNeighborIds, null, [], null, allFoundTriangles.length);
+                        draw(null, [], null, null, null, adj);
+                    }
+                }
+            } catch (e) {
+                if (e.message !== "Aborted") {
+                    console.error("Simulation error:", e);
+                    document.getElementById('error-msg').style.display = 'block';
+                    document.getElementById('error-msg').textContent = "Error: " + e.message;
+                }
+            } finally {
+                isRunning = false;
+                document.getElementById('btn-start').disabled = false;
+                setActiveStep(null);
+            }
+        }
+
+        // --- Helpers ---
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function setActiveStep(stepNum) {
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+            if (stepNum !== null) {
+                const el = document.getElementById(`step-${stepNum}`);
+                if (el) {
+                    el.classList.add('active');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
