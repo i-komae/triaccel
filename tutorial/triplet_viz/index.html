@@ -23,12 +23,12 @@
             display: flex;
             flex-direction: row;
             height: 100vh;
-            overflow: hidden;
+            overflow-x: hidden;
         }
 
         /* Left Panel: Explanation */
         .sidebar {
-            width: 400px;
+            width: min(420px, 34vw);
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
@@ -184,7 +184,7 @@
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: flex-start;
-            justify-content: space-around;
+            justify-content: space-between;
             padding: 1.5rem 2rem;
             font-family: 'JetBrains Mono', monospace;
             flex-shrink: 0;
@@ -195,7 +195,9 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 120px;
+            width: 25%;
+            max-width: 25%;
+            flex: 0 0 25%;
         }
 
         .status-label {
@@ -211,10 +213,14 @@
             font-size: 1.25rem;
             color: #e2e8f0;
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             justify-content: center;
+            align-items: center;
             gap: 6px;
             max-width: 300px;
+            min-height: 1.75rem;
+            line-height: 1;
+            overflow: hidden;
         }
 
         .status-value.highlight {
@@ -281,24 +287,26 @@
             position: absolute;
             top: 0;
             left: calc(100% + 0.5rem);
-            z-index: 50;
-            background: rgba(15, 23, 42, 0.85);
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.95);
             backdrop-filter: blur(8px);
             padding: 1.25rem;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
             width: 280px;
+            max-height: 80vh;
+            overflow-y: auto;
             transition: opacity 0.2s, transform 0.2s;
             transform-origin: top left;
+            opacity: 1;
+            transform: scale(1);
         }
 
         .config-panel.hidden {
             opacity: 0;
             transform: scale(0.95);
             pointer-events: none;
-            display: none;
-            /* Fully hide to prevent interaction */
         }
 
         .config-item {
@@ -389,6 +397,142 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             font-weight: 500;
         }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+
+            .sidebar {
+                width: 100%;
+                padding: 1rem 1.25rem;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .sidebar-header {
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            h1 {
+                font-size: 1.2rem;
+                margin-bottom: 0.25rem;
+            }
+
+            .subtitle {
+                margin-bottom: 1rem;
+                font-size: 0.8rem;
+            }
+
+            .step-container {
+                max-height: 220px;
+            }
+
+            .step {
+                padding: 0.9rem 1rem;
+            }
+
+            .step h3 {
+                font-size: 1rem;
+            }
+
+            .step p {
+                font-size: 0.85rem;
+            }
+
+            .controls {
+                margin-top: 1rem;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            button {
+                width: 100%;
+                padding: 0.8rem;
+                font-size: 0.85rem;
+            }
+
+            .main-view {
+                min-height: 45vh;
+            }
+
+            canvas {
+                min-height: 200px;
+            }
+
+            #status-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+                padding: 0.5rem 0.75rem;
+                height: auto;
+                flex-shrink: 0;
+            }
+
+            .status-item {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                align-items: flex-start;
+            }
+
+            .status-label {
+                font-size: 0.65rem;
+                white-space: nowrap;
+            }
+
+            .status-value {
+                justify-content: flex-start;
+                font-size: 1.05rem;
+                max-width: none;
+                flex-wrap: nowrap;
+                align-items: center;
+                min-height: 1.6rem;
+                line-height: 1;
+                overflow: hidden;
+            }
+
+            .status-value.highlight {
+                font-size: 1.3rem;
+            }
+
+            .legend {
+                display: none;
+            }
+
+            .config-panel {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                z-index: 100;
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+                background: rgba(15, 23, 42, 0.95);
+                backdrop-filter: blur(8px);
+                padding: 1.25rem;
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+                width: min(320px, 90vw);
+                max-height: 80vh;
+                overflow-y: auto;
+                transition: opacity 0.2s, transform 0.2s;
+                transform-origin: center;
+            }
+
+            .config-panel.hidden {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.95);
+                pointer-events: none;
+            }
+
+        }
     </style>
 </head>
 
@@ -452,7 +596,6 @@
 
     <div class="main-view">
         <canvas id="viz-canvas"></canvas>
-
 
         <!-- Status Bar -->
         <div id="status-bar">
@@ -543,6 +686,23 @@
             ctx.fillText('「シミュレーション開始」をクリックしてください', width / 2, height / 2);
         }
 
+        // コントロール（開始・リセットボタンと点数入力）の有効／無効をまとめて切り替える
+        function setControlsRunning(running) {
+            const startBtn = document.getElementById('btn-start');
+            const resetBtn = document.getElementById('btn-reset');
+            const countInput = document.getElementById('input-point-count');
+
+            if (running) {
+                startBtn.disabled = true;
+                resetBtn.disabled = false;
+                countInput.disabled = true;
+            } else {
+                startBtn.disabled = false;
+                resetBtn.disabled = false;
+                countInput.disabled = false;
+            }
+        }
+
         // --- Initialization ---
         window.onerror = function (msg, url, line) {
             const errDiv = document.getElementById('error-msg');
@@ -565,22 +725,27 @@
             const toggleBtn = document.getElementById('btn-config-toggle');
             const configPanel = document.getElementById('config-panel');
             toggleBtn.addEventListener('click', () => {
-                if (configPanel.classList.contains('hidden')) {
-                    configPanel.classList.remove('hidden');
-                    configPanel.style.display = 'block'; // Ensure display is block before opacity transition
-                    // Small timeout to allow display change to register for transition
-                    setTimeout(() => {
-                        configPanel.style.opacity = '1';
-                        configPanel.style.transform = 'scale(1)';
-                    }, 10);
-                } else {
-                    configPanel.style.opacity = '0';
-                    configPanel.style.transform = 'scale(0.95)';
-                    setTimeout(() => {
-                        configPanel.classList.add('hidden');
-                        configPanel.style.display = 'none';
-                    }, 200); // Match transition duration
+                configPanel.classList.toggle('hidden');
+            });
+
+            // 設定パネル外をクリック/タップしたらパネルを閉じる
+            document.addEventListener('click', (event) => {
+                if (configPanel.classList.contains('hidden')) return;
+
+                const target = event.target;
+
+                // 設定ボタン自身またはその子要素なら閉じない
+                if (target === toggleBtn || toggleBtn.contains(target)) {
+                    return;
                 }
+
+                // 設定パネル内のクリックなら閉じない
+                if (configPanel.contains(target)) {
+                    return;
+                }
+
+                // それ以外（＝外側）ならパネルを閉じる
+                configPanel.classList.add('hidden');
             });
 
             // Config Listeners
@@ -607,11 +772,22 @@
 
         function resize() {
             const parent = canvas.parentElement;
-            // Adjust for status bar height (110px)
             width = parent.clientWidth;
-            height = parent.clientHeight - 110;
+
+            if (window.innerWidth <= 768) {
+                const vh = window.innerHeight || document.documentElement.clientHeight || 600;
+                height = Math.max(200, Math.round(vh * 0.4));
+            } else {
+                height = parent.clientHeight - 110;
+            }
+
             canvas.width = width;
             canvas.height = height;
+
+            const minDim = Math.max(200, Math.min(width, height));
+            CONFIG.connectionDistance = Math.max(60, Math.min(220, minDim * 0.15));
+            CONFIG.pointRadius = Math.max(3, Math.min(8, Math.round(minDim / 80)));
+
             if (!isRunning) {
                 if (points.length > 0) {
                     ctx.fillStyle = CONFIG.colors.bg;
@@ -628,9 +804,7 @@
                 abortController = null;
             }
             isRunning = false;
-            document.getElementById('btn-start').disabled = false;
-            document.getElementById('btn-reset').disabled = false;
-            document.getElementById('input-point-count').disabled = false;
+            setControlsRunning(false);
             setActiveStep(null);
             points = [];
             allFoundTriangles = [];
@@ -643,7 +817,6 @@
 
         // Updated to handle lists
         function updateStatus(i, jList, activeJ, kList, activeK, count) {
-            // 1-based indexing for display
             const displayI = i !== null && i !== '-' ? (i + 1) : '-';
             document.getElementById('val-i').textContent = displayI;
 
@@ -653,7 +826,7 @@
             if (jList && jList.length > 0) {
                 jList.forEach(jVal => {
                     const span = document.createElement('span');
-                    span.textContent = (jVal + 1); // 1-based
+                    span.textContent = (jVal + 1);
                     span.className = 'list-item';
                     if (jVal === activeJ) span.classList.add('active');
                     jContainer.appendChild(span);
@@ -668,7 +841,7 @@
             if (kList && kList.length > 0) {
                 kList.forEach(kVal => {
                     const span = document.createElement('span');
-                    span.textContent = (kVal + 1); // 1-based
+                    span.textContent = (kVal + 1);
                     span.className = 'list-item';
                     if (kVal === activeK) span.classList.add('active-k');
                     kContainer.appendChild(span);
@@ -681,11 +854,9 @@
         }
 
         // --- Drawing ---
-        // checkResult: true (connected), false (not connected), or null (neutral/checking)
         function draw(activePivot = null, neighbors = [], activeJ = null, currentTriangle = null, checkPair = null, checkResult = null, adj = null, showRadius = true) {
             if (points.length === 0) return;
 
-            // Clear
             ctx.clearRect(0, 0, width, height);
 
             // 1. Draw All Edges
@@ -795,9 +966,9 @@
                 if (p === activePivot) {
                     color = CONFIG.colors.pivot;
                 } else if (p === activeJ) {
-                    color = CONFIG.colors.secondary; // Highlight J
+                    color = CONFIG.colors.secondary;
                 } else if (checkPair && checkPair[1] === p) {
-                    color = CONFIG.colors.triangle; // Highlight K (Check)
+                    color = CONFIG.colors.triangle;
                 } else if (neighbors.includes(p)) {
                     color = CONFIG.colors.neighbor;
                 }
@@ -805,13 +976,10 @@
                 ctx.fillStyle = color;
                 ctx.fill();
 
-                // Label (Index) - 1-based
                 ctx.fillStyle = '#e2e8f0';
                 ctx.font = 'bold 12px "JetBrains Mono"';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                // Draw text centered on dot or slightly offset?
-                // Let's offset it to avoid cluttering the glow
                 ctx.fillText(p.id + 1, p.x + 12, p.y - 12);
             });
         }
@@ -825,9 +993,7 @@
             abortController = new AbortController();
             const signal = abortController.signal;
 
-            document.getElementById('btn-start').disabled = true;
-            document.getElementById('btn-reset').disabled = false;
-            document.getElementById('input-point-count').disabled = true;
+            setControlsRunning(true);
             document.getElementById('error-msg').style.display = 'none';
             updateStatus('-', [], null, [], null, 0);
 
@@ -836,9 +1002,9 @@
                 setActiveStep(0);
                 points = [];
                 allFoundTriangles = [];
-                const padding = 50;
-                const legendSafeMarginX = 220;
-                const legendSafeMarginY = 220;
+                const padding = Math.max(30, Math.min(60, Math.round(Math.min(width, height) * 0.06)));
+                const legendSafeMarginX = Math.min(220, width * 0.3);
+                const legendSafeMarginY = Math.min(220, height * 0.3);
 
                 for (let i = 0; i < CONFIG.pointCount; i++) {
                     if (signal.aborted) throw new Error("Aborted");
@@ -856,11 +1022,7 @@
                         attempts++;
                     } while (!safe && attempts < 50);
 
-                    points.push({
-                        x: x,
-                        y: y,
-                        id: i
-                    });
+                    points.push({ x, y, id: i });
                     await sleep(CONFIG.speeds.gen);
                     draw();
                 }
@@ -872,27 +1034,22 @@
                     if (signal.aborted) throw new Error("Aborted");
 
                     const pivot = points[i];
-                    // Update status to show we are working on i
                     await sleep(CONFIG.speeds.build);
                     updateStatus(i, [], null, [], null, 0);
-                    draw(points[i], [], null, null, null, null, adj, false); // No radius
+                    draw(points[i], [], null, null, null, null, adj, false);
 
                     for (let j = i + 1; j < points.length; j++) {
                         const neighbor = points[j];
                         const dist = Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y);
                         const isConnected = dist <= CONFIG.connectionDistance;
 
-                        // Visualize check i-j with result color
                         await sleep(CONFIG.speeds.build);
-                        updateStatus(i, [j], j, [], null, 0); // Show j in list
-
-                        // Draw check line with result status
+                        updateStatus(i, [j], j, [], null, 0);
                         draw(points[i], [], neighbor, null, [points[i], neighbor], isConnected, adj, false);
 
                         if (isConnected) {
                             adj[i].push(j);
                             adj[j].push(i);
-                            // Show new edge
                             await sleep(CONFIG.speeds.build);
                             updateStatus(i, [j], j, [], null, 0);
                             draw(points[i], [], null, null, null, null, adj, false);
@@ -927,13 +1084,11 @@
 
                     // STEP 4: Find Triangles
                     if (validNeighbors.length >= 1) {
-
                         for (let idxJ = 0; idxJ < validNeighbors.length; idxJ++) {
                             if (signal.aborted) throw new Error("Aborted");
                             const neighborJ = validNeighbors[idxJ];
                             const j = neighborJ.id;
 
-                            // Candidates for k are other neighbors of i, with k > j
                             const validKs = validNeighbors.filter(n => n.id > j);
                             const validKIds = validKs.map(n => n.id);
 
@@ -948,11 +1103,8 @@
 
                                 await sleep(CONFIG.speeds.main);
                                 updateStatus(i, validNeighborIds, j, validKIds, k, allFoundTriangles.length);
-
-                                // Draw check line with result status
                                 draw(pivot, validNeighbors, neighborJ, null, [neighborJ, neighborK], isConnected, adj, false);
 
-                                // Check if j and k are connected
                                 if (isConnected) {
                                     const newTri = [pivot, neighborJ, neighborK];
                                     allFoundTriangles.push(newTri);
@@ -971,13 +1123,13 @@
             } catch (e) {
                 if (e.message !== "Aborted") {
                     console.error("Simulation error:", e);
-                    document.getElementById('error-msg').style.display = 'block';
-                    document.getElementById('error-msg').textContent = "Error: " + e.message;
+                    const errDiv = document.getElementById('error-msg');
+                    errDiv.style.display = 'block';
+                    errDiv.textContent = "Error: " + e.message;
                 }
             } finally {
                 isRunning = false;
-                document.getElementById('btn-start').disabled = false;
-                document.getElementById('input-point-count').disabled = false;
+                setControlsRunning(false);
                 setActiveStep(null);
             }
         }
